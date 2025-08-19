@@ -1,23 +1,18 @@
 "use client";
-
-import { useState } from "react";
+import { useMemo } from "react";
 import {
   Table,
   Paper,
-  Button,
   Text,
   Badge,
   Group,
   ActionIcon,
   Menu,
+  Stack,
+  Box,
+  Container,
 } from "@mantine/core";
-import {
-  IconDots,
-  IconEdit,
-  IconTrash,
-  IconEye,
-  IconGripVertical,
-} from "@tabler/icons-react";
+import { IconDots, IconEye, IconGripVertical } from "@tabler/icons-react";
 import {
   DragDropContext,
   Droppable,
@@ -25,77 +20,21 @@ import {
   DropResult,
 } from "@hello-pangea/dnd";
 import dayjs from "dayjs";
-
-interface FileAttachment {
-  id: string;
-  name: string;
-  size: number;
-  type: string;
-  url: string;
-  uploadedAt: string;
-}
-
-interface Comment {
-  id: string;
-  text: string;
-  author: string;
-  createdAt: string;
-  attachments?: FileAttachment[];
-}
-
-interface HistoryEntry {
-  id: string;
-  action: string;
-  author: string;
-  createdAt: string;
-  details?: string;
-}
-
-interface Task {
-  id: string;
-  content: string;
-  title?: string;
-  description?: string;
-  priority?: string;
-  assignees?: string[];
-  authors?: string[];
-  status: string;
-  tags?: string[];
-  comments?: Comment[];
-  history?: HistoryEntry[];
-  createdAt?: string;
-  deadline?: string;
-  actualTime?: number;
-}
+import { Task, StatusTask } from "@/types/api";
 
 interface KanbanTableViewProps {
-  tasks: (Task & { status: string })[];
-  onEditTask: (task: Task) => void;
-  onDeleteTask: (taskId: string) => void;
+  tasks: Task[];
   onViewTask: (task: Task) => void;
-  onReorderTasks: (reorderedTasks: (Task & { status: string })[]) => void;
-}
 
+  onTaskStatusChange?: (taskId: string, newStatus: string) => void;
+  statuses?: StatusTask[];
+}
 export default function KanbanTableView({
   tasks,
-  onEditTask,
-  onDeleteTask,
   onViewTask,
-  onReorderTasks,
+  onTaskStatusChange,
+  statuses = [],
 }: KanbanTableViewProps) {
-  const getPriorityColor = (priority?: string) => {
-    switch (priority) {
-      case "high":
-        return "red";
-      case "medium":
-        return "yellow";
-      case "low":
-        return "green";
-      default:
-        return "gray";
-    }
-  };
-
   const getStatusColor = (status: string) => {
     switch (status) {
       case "Backlog":
@@ -114,17 +53,48 @@ export default function KanbanTableView({
         return "gray";
     }
   };
+  const taskGroups = useMemo(() => {
+    // Use statuses from props if available, otherwise fall back to hardcoded values
+    const statusOrder =
+      statuses.length > 0
+        ? statuses.sort((a, b) => a.order - b.order).map((s) => s.name)
+        : [];
 
+    const grouped = tasks.reduce((acc, task) => {
+      const status = task.status.name;
+      if (!acc[status]) {
+        acc[status] = [];
+      }
+      acc[status].push(task);
+      return acc;
+    }, {} as Record<string, Task[]>);
+
+    return statusOrder.map((status) => ({
+      status,
+      tasks: grouped[status] || [],
+      color: getStatusColor(status),
+    }));
+  }, [tasks, statuses]);
+  const getPriorityColor = (priority?: string) => {
+    switch (priority) {
+      case "HIGH":
+        return "red";
+      case "MEDIUM":
+        return "yellow";
+      case "LOW":
+        return "green";
+      default:
+        return "gray";
+    }
+  };
   const formatDate = (dateString?: string) => {
     if (!dateString) return "-";
     return dayjs(dateString).format("MMM DD, YYYY");
   };
-
   const formatDeadline = (deadline?: string) => {
     if (!deadline) return "-";
     const date = dayjs(deadline);
     const now = dayjs();
-
     if (date.isBefore(now)) {
       return (
         <Badge color="red" variant="light" size="xs">
@@ -141,18 +111,51 @@ export default function KanbanTableView({
       return <Text size="sm">{date.format("MMM DD, YYYY")}</Text>;
     }
   };
-
   const handleDragEnd = (result: DropResult) => {
-    if (!result.destination) return;
+    const { destination, source, draggableId } = result;
+    if (!destination) return;
+    if (
+      destination.droppableId === source.droppableId &&
+      destination.index === source.index
+    ) {
+      return;
+    }
+    console.log(destination, source);
+    const sourceGroupIndex = taskGroups.findIndex(
+      (group) => `table-${group.status}` === source.droppableId
+    );
+    const destGroupIndex = taskGroups.findIndex(
+      (group) => `table-${group.status}` === destination.droppableId
+    );
+    if (sourceGroupIndex === -1 || destGroupIndex === -1) return;
+    const sourceGroup = taskGroups[sourceGroupIndex];
+    const destGroup = taskGroups[destGroupIndex];
+    const taskToMove = sourceGroup.tasks.find(
+      (task) => task.id === draggableId
+    );
 
-    const reorderedTasks = Array.from(tasks);
-    const [movedTask] = reorderedTasks.splice(result.source.index, 1);
-    reorderedTasks.splice(result.destination.index, 0, movedTask);
+    if (!taskToMove) return;
+    let newTasks = [...tasks];
+    newTasks = newTasks.filter((task) => task.id !== draggableId);
+    if (sourceGroup.status !== destGroup.status) {
+      const deskId = statuses.find(
+        (task) => task.name === destGroup.status
+      )?.id;
 
-    onReorderTasks(reorderedTasks);
+      if (onTaskStatusChange && deskId) {
+        onTaskStatusChange(taskToMove.id, deskId);
+      }
+    }
   };
-
-  const rows = tasks.map((task, index) => (
+  const TaskRow = ({
+    task,
+    index,
+    groupStatus,
+  }: {
+    task: Task;
+    index: number;
+    groupStatus: string;
+  }) => (
     <Draggable key={task.id} draggableId={task.id} index={index}>
       {(provided, snapshot) => (
         <Table.Tr
@@ -161,6 +164,7 @@ export default function KanbanTableView({
           style={{
             ...provided.draggableProps.style,
             backgroundColor: snapshot.isDragging ? "#f8f9fa" : "transparent",
+            opacity: snapshot.isDragging ? 0.8 : 1,
           }}
         >
           <Table.Td>
@@ -173,7 +177,7 @@ export default function KanbanTableView({
               </div>
               <div>
                 <Text fw={500} size="sm" className="truncate max-w-[200px]">
-                  {task.title || task.content}
+                  {task.name}
                 </Text>
                 {task.description && (
                   <Text size="xs" c="dimmed" className="truncate max-w-[200px]">
@@ -182,15 +186,6 @@ export default function KanbanTableView({
                 )}
               </div>
             </Group>
-          </Table.Td>
-          <Table.Td>
-            <Badge
-              color={getStatusColor(task.status)}
-              variant="light"
-              size="sm"
-            >
-              {task.status}
-            </Badge>
           </Table.Td>
           <Table.Td>
             {task.priority && (
@@ -206,7 +201,7 @@ export default function KanbanTableView({
           <Table.Td>
             <Text size="sm">
               {task.assignees && task.assignees.length > 0
-                ? task.assignees.join(", ")
+                ? task.assignees.map((a) => a.user.name).join(", ")
                 : "-"}
             </Text>
           </Table.Td>
@@ -225,7 +220,6 @@ export default function KanbanTableView({
                   <IconDots size={16} />
                 </ActionIcon>
               </Menu.Target>
-
               <Menu.Dropdown>
                 <Menu.Item
                   leftSection={<IconEye size={14} />}
@@ -233,71 +227,120 @@ export default function KanbanTableView({
                 >
                   View
                 </Menu.Item>
-                <Menu.Item
-                  leftSection={<IconEdit size={14} />}
-                  onClick={() => onEditTask(task)}
-                >
-                  Edit
-                </Menu.Item>
-                <Menu.Item
-                  leftSection={<IconTrash size={14} />}
-                  color="red"
-                  onClick={() => onDeleteTask(task.id)}
-                >
-                  Delete
-                </Menu.Item>
               </Menu.Dropdown>
             </Menu>
           </Table.Td>
         </Table.Tr>
       )}
     </Draggable>
-  ));
-
+  );
   return (
-    <Paper shadow="sm" p="md">
+    <Container fluid>
       <div className="mb-4">
         <Text size="lg" fw={600}>
-          Tasks Table View
+          Tasks Table View by Status
         </Text>
         <Text size="sm" c="dimmed">
-          {tasks.length} task{tasks.length !== 1 ? "s" : ""} total
+          {tasks.length} task{tasks.length !== 1 ? "s" : ""} total across{" "}
+          {taskGroups.filter((group) => group.tasks.length > 0).length} status
+          groups
         </Text>
       </div>
-
       <DragDropContext onDragEnd={handleDragEnd}>
-        <Table striped highlightOnHover>
-          <Table.Thead>
-            <Table.Tr>
-              <Table.Th>Task</Table.Th>
-              <Table.Th>Status</Table.Th>
-              <Table.Th>Priority</Table.Th>
-              <Table.Th>Assignees</Table.Th>
-              <Table.Th>Deadline</Table.Th>
-              <Table.Th>Actual Time</Table.Th>
-              <Table.Th>Actions</Table.Th>
-            </Table.Tr>
-          </Table.Thead>
-          <Droppable droppableId="table-tasks">
-            {(provided) => (
-              <Table.Tbody ref={provided.innerRef} {...provided.droppableProps}>
-                {rows.length > 0 ? (
-                  rows
-                ) : (
-                  <Table.Tr>
-                    <Table.Td colSpan={7} className="text-center">
-                      <Text c="dimmed" size="sm">
-                        No tasks found
-                      </Text>
-                    </Table.Td>
-                  </Table.Tr>
+        <Stack gap="lg">
+          {taskGroups.map((group) => (
+            <Paper
+              key={group.status}
+              shadow="sm"
+              p="md"
+              style={{
+                border: `2px solid var(--mantine-color-${group.color}-3)`,
+                borderRadius: "8px",
+              }}
+            >
+              <Group justify="space-between" mb="md">
+                <Group gap="sm">
+                  <Badge
+                    color={group.color}
+                    variant="light"
+                    size="lg"
+                    style={{ fontWeight: 600 }}
+                  >
+                    {group.status}
+                  </Badge>
+                  <Text size="sm" c="dimmed">
+                    {group.tasks.length} task
+                    {group.tasks.length !== 1 ? "s" : ""}
+                  </Text>
+                </Group>
+              </Group>
+              <Droppable droppableId={`table-${group.status}`}>
+                {(provided, snapshot) => (
+                  <Box
+                    ref={provided.innerRef}
+                    {...provided.droppableProps}
+                    style={{
+                      backgroundColor: snapshot.isDraggingOver
+                        ? `var(--mantine-color-${group.color}-0)`
+                        : "transparent",
+                      borderRadius: "4px",
+                      minHeight: group.tasks.length === 0 ? "60px" : "auto",
+                      padding: snapshot.isDraggingOver ? "8px" : "0",
+                      transition: "all 0.2s ease",
+                    }}
+                  >
+                    {group.tasks.length > 0 ? (
+                      <Table striped highlightOnHover>
+                        <Table.Thead>
+                          <Table.Tr>
+                            <Table.Th>Task</Table.Th>
+                            <Table.Th>Priority</Table.Th>
+                            <Table.Th>Assignees</Table.Th>
+                            <Table.Th>Deadline</Table.Th>
+                            <Table.Th>Actual Time</Table.Th>
+                            <Table.Th>Actions</Table.Th>
+                          </Table.Tr>
+                        </Table.Thead>
+                        <Table.Tbody>
+                          {group.tasks.map((task, index) => (
+                            <TaskRow
+                              key={task.id}
+                              task={task}
+                              index={index}
+                              groupStatus={group.status}
+                            />
+                          ))}
+                        </Table.Tbody>
+                      </Table>
+                    ) : (
+                      <Box
+                        p="xl"
+                        style={{
+                          textAlign: "center",
+                          border: snapshot.isDraggingOver
+                            ? `2px dashed var(--mantine-color-${group.color}-4)`
+                            : `1px dashed var(--mantine-color-gray-4)`,
+                          borderRadius: "4px",
+                          backgroundColor: snapshot.isDraggingOver
+                            ? `var(--mantine-color-${group.color}-0)`
+                            : "var(--mantine-color-gray-0)",
+                        }}
+                      >
+                        <Text c="dimmed" size="sm">
+                          {snapshot.isDraggingOver
+                            ? `Drop task here to move to ${group.status}`
+                            : `No tasks in ${group.status}`}
+                        </Text>
+                      </Box>
+                    )}
+                    {provided.placeholder}
+                  </Box>
                 )}
-                {provided.placeholder}
-              </Table.Tbody>
-            )}
-          </Droppable>
-        </Table>
+              </Droppable>
+            </Paper>
+          ))}
+        </Stack>
       </DragDropContext>
-    </Paper>
+    </Container>
   );
 }

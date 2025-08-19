@@ -1,58 +1,32 @@
 "use client";
-
-import { Paper, Text, Group, Badge, Button } from "@mantine/core";
+import { useState } from "react";
+import {
+  Paper,
+  Text,
+  Group,
+  Badge,
+  Button,
+  ActionIcon,
+  Menu,
+  Modal,
+  TextInput,
+} from "@mantine/core";
 import { Droppable, DraggableProvidedDragHandleProps } from "@hello-pangea/dnd";
-import { IconPlus, IconGripVertical } from "@tabler/icons-react";
+import {
+  IconPlus,
+  IconGripVertical,
+  IconDots,
+  IconEdit,
+  IconTrash,
+} from "@tabler/icons-react";
 import TaskCard from "./TaskCard";
-
-interface FileAttachment {
-  id: string;
-  name: string;
-  size: number;
-  type: string;
-  url: string;
-  uploadedAt: string;
-}
-
-interface Comment {
-  id: string;
-  text: string;
-  author: string;
-  createdAt: string;
-  attachments?: FileAttachment[];
-}
-
-interface HistoryEntry {
-  id: string;
-  action: string;
-  author: string;
-  createdAt: string;
-  details?: string;
-}
-
-interface Task {
-  id: string;
-  content: string;
-  title?: string;
-  description?: string;
-  priority?: string;
-  assignees?: string[];
-  authors?: string[];
-  status: string;
-  tags?: string[];
-  comments?: Comment[];
-  history?: HistoryEntry[];
-  createdAt?: string;
-  deadline?: string;
-  actualTime?: number;
-}
+import { Task } from "@/types/api";
 
 interface Column {
   id: string;
   title: string;
   cards: Task[];
 }
-
 interface KanbanColumnProps {
   column: Column;
   onViewTask: (task: Task) => void;
@@ -61,7 +35,6 @@ interface KanbanColumnProps {
   onRenameColumn?: (newTitle: string) => void;
   dragHandleProps?: DraggableProvidedDragHandleProps | null;
 }
-
 export default function KanbanColumn({
   column,
   onViewTask,
@@ -70,58 +43,138 @@ export default function KanbanColumn({
   onRenameColumn,
   dragHandleProps,
 }: KanbanColumnProps) {
+  const [isRenameModalOpen, setIsRenameModalOpen] = useState(false);
+  const [newTitle, setNewTitle] = useState(column.title);
+
+  const handleRename = () => {
+    if (newTitle.trim() && onRenameColumn) {
+      onRenameColumn(newTitle.trim());
+      setIsRenameModalOpen(false);
+    }
+  };
+
+  const handleDelete = () => {
+    if (onDeleteColumn) {
+      onDeleteColumn();
+    }
+  };
   return (
-    <Paper
-      key={column.id}
-      shadow="md"
-      radius="md"
-      p="md"
-      className="bg-gray-100 min-w-[240px] w-[240px]"
-    >
-      <Group justify="space-between" mb="md">
-        <Group gap="xs">
-          <div
-            {...dragHandleProps}
-            className="cursor-grab active:cursor-grabbing"
-          >
-            <IconGripVertical size={16} color="#666" />
-          </div>
-          <Text fw={700} size="lg">
-            {column.title}
-          </Text>
-        </Group>
-        <Badge variant="outline" size="sm">
-          {column.cards.length}
-        </Badge>
-      </Group>
-      <Droppable droppableId={column.id}>
-        {(provided) => (
-          <div
-            ref={provided.innerRef}
-            {...provided.droppableProps}
-            className="flex flex-col gap-2 min-h-[100px]"
-          >
-            {column.cards.map((card, idx) => (
-              <TaskCard
-                key={card.id}
-                card={card}
-                index={idx}
-                onViewTask={onViewTask}
-              />
-            ))}
-            {provided.placeholder}
-          </div>
-        )}
-      </Droppable>
-      <Button
-        variant="light"
-        leftSection={<IconPlus size={16} />}
-        fullWidth
-        mt="md"
-        onClick={onAddTask}
+    <>
+      <Paper
+        key={column.id}
+        shadow="md"
+        radius="md"
+        p="md"
+        className="bg-gray-100 min-w-[240px] w-[240px]"
       >
-        Add Task
-      </Button>
-    </Paper>
+        <Group justify="space-between" mb="md">
+          <Group gap="xs" style={{ flex: 1 }}>
+            <div
+              {...dragHandleProps}
+              className="cursor-grab active:cursor-grabbing"
+            >
+              <IconGripVertical size={16} color="#666" />
+            </div>
+            <Text fw={700} size="lg" style={{ flex: 1 }}>
+              {column.title}
+            </Text>
+          </Group>
+          <Group gap="xs">
+            <Badge variant="outline" size="sm">
+              {column.cards.length}
+            </Badge>
+            <Menu shadow="md" width={150}>
+              <Menu.Target>
+                <ActionIcon variant="subtle" color="gray" size="sm">
+                  <IconDots size={16} />
+                </ActionIcon>
+              </Menu.Target>
+              <Menu.Dropdown>
+                <Menu.Item
+                  leftSection={<IconEdit size={14} />}
+                  onClick={() => {
+                    setNewTitle(column.title);
+                    setIsRenameModalOpen(true);
+                  }}
+                >
+                  Rename
+                </Menu.Item>
+                <Menu.Item
+                  leftSection={<IconTrash size={14} />}
+                  color="red"
+                  onClick={handleDelete}
+                  disabled={column.cards.length > 0}
+                >
+                  Delete
+                </Menu.Item>
+              </Menu.Dropdown>
+            </Menu>
+          </Group>
+        </Group>
+        <Droppable droppableId={column.id}>
+          {(provided) => (
+            <div
+              ref={provided.innerRef}
+              {...provided.droppableProps}
+              className="flex flex-col gap-2 min-h-[100px]"
+            >
+              {column.cards.map((card, idx) => (
+                <TaskCard
+                  key={card.id}
+                  card={card}
+                  index={idx}
+                  onViewTask={onViewTask}
+                />
+              ))}
+              {provided.placeholder}
+            </div>
+          )}
+        </Droppable>
+        <Button
+          variant="light"
+          leftSection={<IconPlus size={16} />}
+          fullWidth
+          mt="md"
+          onClick={onAddTask}
+        >
+          Add Task
+        </Button>
+      </Paper>
+
+      {/* Rename Modal */}
+      <Modal
+        opened={isRenameModalOpen}
+        onClose={() => setIsRenameModalOpen(false)}
+        title="Rename Column"
+        size="sm"
+        centered
+      >
+        <TextInput
+          label="Column Name"
+          value={newTitle}
+          onChange={(e) => setNewTitle(e.target.value)}
+          placeholder="Enter column name"
+          data-autofocus
+          onKeyDown={(e) => {
+            if (e.key === "Enter") {
+              handleRename();
+            } else if (e.key === "Escape") {
+              setIsRenameModalOpen(false);
+            }
+          }}
+        />
+        <Group justify="end" mt="md">
+          <Button variant="outline" onClick={() => setIsRenameModalOpen(false)}>
+            Cancel
+          </Button>
+          <Button
+            onClick={handleRename}
+            disabled={!newTitle.trim() || newTitle.trim() === column.title}
+          >
+            Rename
+          </Button>
+        </Group>
+      </Modal>
+    </>
   );
 }

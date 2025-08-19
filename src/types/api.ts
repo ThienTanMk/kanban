@@ -1,102 +1,104 @@
-// This file contains all types for the Kanban API
-// Can be shared with Frontend team
-
-// --- DATABASE MODELS ---
+// Base Entity Interfaces
 export interface User {
-  id: number;
+  id: string;
   email: string;
-  username: string;
-  fullName: string | null;
+  name: string;
+  bio?: string;
+  phone?: string;
   avatar: string | null;
   createdAt: Date;
   updatedAt: Date;
 }
 
 export interface Project {
-  id: number;
+  id: string;
   name: string;
   description: string | null;
   createdAt: Date;
   updatedAt: Date;
   startDate: Date | null;
   endDate: Date | null;
-  ownerId: number;
+  ownerId: string;
+  archived?: boolean;
 }
 
 export interface UsersOnProject {
-  userId: number;
-  projectId: number;
+  userId: string;
+  projectId: string;
   role: ProjectRole;
   joinedAt: Date;
 }
 
 export interface StatusTask {
-  id: number;
+  id: string;
   name: string;
   color: string | null;
   order: number;
-  projectId: number;
+  projectId: string;
   createdAt: Date;
   updatedAt: Date;
 }
 
 export interface Tags {
-  id: number;
+  id: string;
   name: string;
   color: string | null;
-  projectId: number;
+  projectId: string;
   createdAt: Date;
   updatedAt: Date;
 }
 
 export interface TagOnTask {
-  taskId: number;
-  tagId: number;
-}
-
-export interface Task {
-  id: number;
-  title: string;
-  description: string | null;
-  priority: Priority;
-  dueDate: Date | null;
-  createdAt: Date;
-  updatedAt: Date;
-  projectId: number;
-  statusId: number;
-  assigneeId: number | null;
+  taskId: string;
+  tagId: string;
 }
 
 export interface Comment {
-  id: number;
+  id: string;
   content: string;
-  createdAt: Date;
-  updatedAt: Date;
-  taskId: number;
-  authorId: number;
+  taskId: string;
+  userId: string;
+  file: any;
+  createdAt: string;
+  updatedAt: string;
+  user: User;
 }
 
 export interface Event {
-  id: number;
+  id: string;
   type: EventType;
   description: string | null;
   createdAt: Date;
-  projectId: number;
-  userId: number;
-  taskId: number | null;
+  projectId: string;
+  userId: string;
+  taskId: string | null;
+}
+
+export enum InviteStatus {
+  PENDING = "PENDING",
+  ACCEPTED = "ACCEPTED",
+}
+
+export interface Invite {
+  id: string;
+  email: string;
+  projectId: string;
+  status: InviteStatus;
+  createdAt: Date;
+  updatedAt: Date;
+  role: ProjectRole;
 }
 
 export interface Notification {
-  id: number;
+  id: string;
   title: string;
   message: string;
   isRead: boolean;
   createdAt: Date;
-  userId: number;
-  eventId: number | null;
+  userId: string;
+  eventId: string | null;
 }
-
-// --- ENUMS for FE ---
+// Enums
 export enum ProjectRole {
   OWNER = "OWNER",
   ADMIN = "ADMIN",
@@ -119,8 +121,123 @@ export enum EventType {
   COMMENT_DELETED = "COMMENT_DELETED",
 }
 
-// --- API RESPONSE TYPES ---
-// Base response structure
+export interface UsersOnProject {
+  user: User;
+  createdAt: Date;
+  updatedAt: Date;
+  userId: string;
+  projectId: string;
+  role: ProjectRole;
+}
+
+// DTOs based on OpenAPI Schema Components
+export interface UpdateUserDto {
+  name?: string;
+  avatar?: string;
+}
+
+export interface CreateInviteDto {
+  email: string;
+  projectId: string;
+  role?: ProjectRole;
+}
+
+export interface CreateStatusDto {
+  name: string;
+  color?: string;
+  order: number;
+  projectId: string;
+}
+
+export interface CreateProjectDto {
+  name: string;
+  description?: string;
+  startDate?: Date;
+  endDate?: Date;
+}
+
+export interface UpdateProjectDto {
+  name?: string;
+  description?: string;
+  startDate?: Date;
+  endDate?: Date;
+  archived?: boolean;
+}
+
+export interface CreateTaskDto {
+  title: string;
+  description?: string;
+  priority: Priority;
+  dueDate?: Date;
+  projectId: string;
+  statusId: string;
+  assigneeId?: string;
+  tagIds?: string[];
+}
+
+export interface UpdateTaskDto {
+  title?: string;
+  description?: string;
+  priority?: Priority;
+  dueDate?: Date;
+  statusId?: string;
+  assigneeId?: string;
+  tagIds?: string[];
+  archived?: boolean;
+}
+
+export interface UpdateStatusDto {
+  statusId: string;
+}
+
+export interface CreateTagDto {
+  name: string;
+  color?: string;
+  projectId: string;
+}
+
+export interface UpdateTagDto {
+  name?: string;
+  color?: string;
+}
+
+export interface CreateNotificationDto {
+  title: string;
+  message: string;
+  userId: string;
+  eventId?: string;
+}
+
+export interface UpdateNotificationDto {
+  title?: string;
+  message?: string;
+  isRead?: boolean;
+}
+
+export interface CreateCommentDto {
+  content: string;
+  taskId: string;
+}
+
+export interface UpdateCommentDto {
+  content: string;
+}
+
+// Generic Types
+export interface Object {
+  [key: string]: any;
+}
+
+// Query Parameters
+export interface QueryParams {
+  filter?: Object;
+  orderBy?: string;
+  include?: string;
+  archived?: boolean;
+  page?: number;
+  pageSize?: number | Object;
+}
+// API Response Types
 export interface ApiResponse<T = any> {
   success: boolean;
   message?: string;
@@ -128,7 +245,6 @@ export interface ApiResponse<T = any> {
   error?: string;
 }
 
-// Paginated response
 export interface PaginatedResponse<T = any> {
   success: boolean;
   message?: string;
@@ -141,7 +257,45 @@ export interface PaginatedResponse<T = any> {
   };
 }
 
-// --- USER CRUD RESPONSES ---
+// User API Types
+export type UserResponse = ApiResponse<User>;
+export type UserListResponse = PaginatedResponse<User>;
+export type AvailableUsersResponse = ApiResponse<User[]>;
+
+// Project API Types
+export type ProjectResponse = ApiResponse<Project>;
+export type ProjectListResponse = PaginatedResponse<Project>;
+export type ProjectTasksResponse = ApiResponse<Task[]>;
+
+// Task API Types
+export type TaskResponse = ApiResponse<Task>;
+export type TaskListResponse = PaginatedResponse<Task>;
+
+// Status API Types
+export type StatusResponse = ApiResponse<StatusTask>;
+export type StatusListResponse = ApiResponse<StatusTask[]>;
+
+// Invite API Types
+export type InviteResponse = ApiResponse<Invite>;
+export type InviteListResponse = ApiResponse<Invite[]>;
+
+// Tag API Types
+export type TagResponse = ApiResponse<Tags>;
+export type TagListResponse = ApiResponse<Tags[]>;
+
+// Notification API Types
+export type NotificationResponse = ApiResponse<Notification>;
+export type NotificationListResponse = ApiResponse<Notification[]>;
+
+// Comment API Types
+export type CommentResponse = ApiResponse<Comment>;
+export type CommentListResponse = ApiResponse<Comment[]>;
+
+// Event API Types
+export type EventResponse = ApiResponse<Event>;
+export type EventListResponse = ApiResponse<Event[]>;
+
+// Legacy types for backward compatibility (deprecated)
 export interface UserCreateRequest {
   email: string;
   username: string;
@@ -155,13 +309,10 @@ export interface UserUpdateRequest {
   avatar?: string;
 }
 
-export type UserResponse = ApiResponse<User>;
-export type UserListResponse = PaginatedResponse<User>;
 export type UserCreateResponse = ApiResponse<User>;
 export type UserUpdateResponse = ApiResponse<User>;
-export type UserDeleteResponse = ApiResponse<{ id: number }>;
+export type UserDeleteResponse = ApiResponse<{ id: string }>;
 
-// --- PROJECT CRUD RESPONSES ---
 export interface ProjectCreateRequest {
   name: string;
   description?: string;
@@ -176,44 +327,33 @@ export interface ProjectUpdateRequest {
   endDate?: Date;
 }
 
-export type ProjectResponse = ApiResponse<Project>;
-export type ProjectListResponse = PaginatedResponse<Project>;
 export type ProjectCreateResponse = ApiResponse<Project>;
 export type ProjectUpdateResponse = ApiResponse<Project>;
-export type ProjectDeleteResponse = ApiResponse<{ id: number }>;
+export type ProjectDeleteResponse = ApiResponse<{ id: string }>;
 
-// --- TASK CRUD RESPONSES ---
 export interface TaskCreateRequest {
-  title: string;
+  name: string;
   description?: string;
   priority: Priority;
   dueDate?: Date;
-  projectId: number;
-  statusId: number;
-  assigneeId?: number;
+  statusId?: string;
+  assignees?: string[];
+  deadline?: string;
+  ownerId?: string;
+  actualTime?: number;
 }
 
-export interface TaskUpdateRequest {
-  title?: string;
-  description?: string;
-  priority?: Priority;
-  dueDate?: Date;
-  statusId?: number;
-  assigneeId?: number;
-}
+export interface TaskUpdateRequest extends Partial<TaskCreateRequest> {}
 
-export type TaskResponse = ApiResponse<Task>;
-export type TaskListResponse = PaginatedResponse<Task>;
 export type TaskCreateResponse = ApiResponse<Task>;
 export type TaskUpdateResponse = ApiResponse<Task>;
-export type TaskDeleteResponse = ApiResponse<{ id: number }>;
+export type TaskDeleteResponse = ApiResponse<{ id: string }>;
 
-// --- STATUS TASK CRUD RESPONSES ---
 export interface StatusTaskCreateRequest {
   name: string;
   color?: string;
   order: number;
-  projectId: number;
+  projectId: string;
 }
 
 export interface StatusTaskUpdateRequest {
@@ -226,13 +366,12 @@ export type StatusTaskResponse = ApiResponse<StatusTask>;
 export type StatusTaskListResponse = PaginatedResponse<StatusTask>;
 export type StatusTaskCreateResponse = ApiResponse<StatusTask>;
 export type StatusTaskUpdateResponse = ApiResponse<StatusTask>;
-export type StatusTaskDeleteResponse = ApiResponse<{ id: number }>;
+export type StatusTaskDeleteResponse = ApiResponse<{ id: string }>;
 
-// --- TAGS CRUD RESPONSES ---
 export interface TagsCreateRequest {
   name: string;
   color?: string;
-  projectId: number;
+  projectId: string;
 }
 
 export interface TagsUpdateRequest {
@@ -244,27 +383,23 @@ export type TagsResponse = ApiResponse<Tags>;
 export type TagsListResponse = PaginatedResponse<Tags>;
 export type TagsCreateResponse = ApiResponse<Tags>;
 export type TagsUpdateResponse = ApiResponse<Tags>;
-export type TagsDeleteResponse = ApiResponse<{ id: number }>;
+export type TagsDeleteResponse = ApiResponse<{ id: string }>;
 
-// --- COMMENT CRUD RESPONSES ---
 export interface CommentCreateRequest {
   content: string;
-  taskId: number;
+  taskId: string;
 }
 
 export interface CommentUpdateRequest {
   content: string;
 }
 
-export type CommentResponse = ApiResponse<Comment>;
-export type CommentListResponse = PaginatedResponse<Comment>;
 export type CommentCreateResponse = ApiResponse<Comment>;
 export type CommentUpdateResponse = ApiResponse<Comment>;
-export type CommentDeleteResponse = ApiResponse<{ id: number }>;
+export type CommentDeleteResponse = ApiResponse<{ id: string }>;
 
-// --- PROJECT MEMBER MANAGEMENT ---
 export interface AddMemberRequest {
-  userId: number;
+  userId: string;
   role: ProjectRole;
 }
 
@@ -277,15 +412,43 @@ export type MemberListResponse = PaginatedResponse<UsersOnProject>;
 export type AddMemberResponse = ApiResponse<UsersOnProject>;
 export type UpdateMemberResponse = ApiResponse<UsersOnProject>;
 export type RemoveMemberResponse = ApiResponse<{
-  userId: number;
-  projectId: number;
+  userId: string;
+  projectId: string;
 }>;
 
-// --- NOTIFICATION RESPONSES ---
-export type NotificationResponse = ApiResponse<Notification>;
-export type NotificationListResponse = PaginatedResponse<Notification>;
 export type MarkNotificationReadResponse = ApiResponse<Notification>;
 
-// --- EVENT RESPONSES ---
-export type EventResponse = ApiResponse<Event>;
-export type EventListResponse = PaginatedResponse<Event>;
+export interface Task {
+  id: string;
+  name: string;
+  description: string;
+  statusId: string;
+  deadline: string;
+  actualTime: any;
+  createdAt: string;
+  updatedAt: string;
+  priority: string;
+  ownerId: string;
+  tagOnTask: any[];
+  status: Status;
+  assignees: Assignee[];
+  owner: Owner;
+}
+
+export interface Status {
+  id: string;
+  name: string;
+  projectId: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface Assignee {
+  userId: string;
+  taskId: string;
+  createdAt: string;
+  updatedAt: string;
+  user: User;
+}
+
+export interface Owner extends User {}

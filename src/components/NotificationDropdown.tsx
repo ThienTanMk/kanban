@@ -1,5 +1,4 @@
 "use client";
-
 import { useState } from "react";
 import {
   Menu,
@@ -16,10 +15,7 @@ import {
 import { IconBell, IconCheck, IconTrash } from "@tabler/icons-react";
 import dayjs from "dayjs";
 import relativeTime from "dayjs/plugin/relativeTime";
-
-// Extend dayjs with relativeTime plugin
 dayjs.extend(relativeTime);
-
 interface Notification {
   id: string;
   title: string;
@@ -30,7 +26,6 @@ interface Notification {
   avatar?: string;
   author?: string;
 }
-
 export default function NotificationDropdown() {
   const [notifications, setNotifications] = useState<Notification[]>([
     {
@@ -83,27 +78,21 @@ export default function NotificationDropdown() {
       createdAt: "2025-08-14T06:00:00Z",
     },
   ]);
-
   const unreadCount = notifications.filter((n) => !n.read).length;
-
   const markAsRead = (notificationId: string) => {
     setNotifications((prev) =>
       prev.map((n) => (n.id === notificationId ? { ...n, read: true } : n))
     );
   };
-
   const markAllAsRead = () => {
     setNotifications((prev) => prev.map((n) => ({ ...n, read: true })));
   };
-
   const deleteNotification = (notificationId: string) => {
     setNotifications((prev) => prev.filter((n) => n.id !== notificationId));
   };
-
   const formatTime = (dateString: string) => {
     return dayjs(dateString).fromNow();
   };
-
   const getNotificationColor = (type: string) => {
     switch (type) {
       case "task":
@@ -118,7 +107,6 @@ export default function NotificationDropdown() {
         return "gray";
     }
   };
-
   return (
     <Menu shadow="md" width={380} position="bottom-end">
       <Menu.Target>
@@ -139,7 +127,6 @@ export default function NotificationDropdown() {
           )}
         </ActionIcon>
       </Menu.Target>
-
       <Menu.Dropdown>
         <Group justify="space-between" p="xs" pb="sm">
           <Text fw={600}>Notifications</Text>
@@ -154,7 +141,6 @@ export default function NotificationDropdown() {
             </Button>
           )}
         </Group>
-
         <ScrollArea.Autosize mah={400}>
           {notifications.length === 0 ? (
             <Text ta="center" c="dimmed" p="xl">

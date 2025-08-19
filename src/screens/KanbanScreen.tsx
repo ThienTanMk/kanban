@@ -1,98 +1,104 @@
 "use client";
-
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { Group, Button, Text, Avatar, Menu } from "@mantine/core";
-import { IconUser, IconLogout, IconShare } from "@tabler/icons-react";
-import KanbanBoard from "../components/KanbanBoard";
+import { Group, Button, Text, Container, Alert } from "@mantine/core";
+import { IconShare, IconAlertCircle } from "@tabler/icons-react";
+import KanbanBoardNew from "../components/KanbanBoardNew";
 import ShareModal from "../components/ShareModal";
 import NotificationDropdown from "../components/NotificationDropdown";
-
+import AppLayout from "../components/AppLayout";
+import { useProjectStore } from "../stores/projectStore";
+import { useProject } from "../hooks/project";
+import { useUserStore } from "@/stores/userStore";
 export default function KanbanScreen() {
   const router = useRouter();
   const [shareModalOpened, setShareModalOpened] = useState(false);
-
+  const { currentProjectId } = useProjectStore();
+  const {} = useProject(currentProjectId);
   const handleNavigateToProfile = () => {
     router.push("/profile");
   };
 
+  const {
+    data: currentProject,
+    isLoading,
+    error,
+  } = useProject(currentProjectId);
+  const { clearData } = useProjectStore();
+  const { clearData: clearUserData } = useUserStore();
+
   const handleLogout = () => {
+    localStorage.clear();
+    clearData();
+    clearUserData();
     router.push("/login");
   };
-
+  useEffect(() => {}, []);
   return (
-    <div className="min-h-screen bg-white">
-      {/* Header */}
-      <div className="border-b border-gray-200 bg-white">
-        <div className="px-6 py-4">
-          <Group justify="space-between">
-            <div>
-              <Text size="xl" fw={700} c="blue">
-                TaskBoard
-              </Text>
-              <Text size="sm" c="dimmed">
-                Manage your tasks efficiently
-              </Text>
-            </div>
-
-            <Group gap="sm">
-              <Button
-                variant="outline"
-                leftSection={<IconShare size={16} />}
-                onClick={() => setShareModalOpened(true)}
-              >
-                Share
-              </Button>
-
-              <NotificationDropdown />
-
-              <Menu shadow="md" width={200}>
-                <Menu.Target>
-                  <Button
-                    variant="subtle"
-                    leftSection={
-                      <Avatar size="sm" radius="xl">
-                        JD
-                      </Avatar>
-                    }
-                  >
-                    John Doe
-                  </Button>
-                </Menu.Target>
-
-                <Menu.Dropdown>
-                  <Menu.Label>john.doe@example.com</Menu.Label>
-                  <Menu.Divider />
-
-                  <Menu.Item
-                    leftSection={<IconUser size={14} />}
-                    onClick={handleNavigateToProfile}
-                  >
-                    Profile
-                  </Menu.Item>
-
-                  <Menu.Item
-                    leftSection={<IconLogout size={14} />}
-                    color="red"
-                    onClick={handleLogout}
-                  >
-                    Logout
-                  </Menu.Item>
-                </Menu.Dropdown>
-              </Menu>
+    <AppLayout
+      onLogout={handleLogout}
+      onNavigateToProfile={handleNavigateToProfile}
+    >
+      <Container fluid>
+        {}
+        {currentProject && (
+          <div className="mb-6">
+            <Group justify="space-between" mb="md">
+              <div>
+                <Text size="xl" fw={700}>
+                  {currentProject.name}
+                </Text>
+                {currentProject.description && (
+                  <Text size="sm" c="dimmed">
+                    {currentProject.description}
+                  </Text>
+                )}
+              </div>
+              <Group gap="sm">
+                <Button
+                  variant="outline"
+                  leftSection={<IconShare size={16} />}
+                  onClick={() => setShareModalOpened(true)}
+                >
+                  Share Project
+                </Button>
+                <NotificationDropdown />
+              </Group>
             </Group>
-          </Group>
-        </div>
-      </div>
+          </div>
+        )}
 
-      {/* Main Content */}
-      <KanbanBoard />
+        {!currentProjectId && !isLoading && (
+          <Alert
+            icon={<IconAlertCircle size={16} />}
+            title="No Project Selected"
+            color="blue"
+            variant="light"
+          >
+            Please select a project from the sidebar to start managing tasks, or
+            create a new project if you haven't done so.
+          </Alert>
+        )}
 
-      {/* Share Modal */}
-      <ShareModal
-        opened={shareModalOpened}
-        onClose={() => setShareModalOpened(false)}
-      />
-    </div>
+        {error && (
+          <Alert
+            icon={<IconAlertCircle size={16} />}
+            title="Error Loading Projects"
+            color="red"
+            variant="light"
+            mb="md"
+          >
+            {error?.toString()}
+          </Alert>
+        )}
+
+        {currentProjectId && currentProject && <KanbanBoardNew />}
+
+        <ShareModal
+          opened={shareModalOpened}
+          onClose={() => setShareModalOpened(false)}
+        />
+      </Container>
+    </AppLayout>
   );
 }

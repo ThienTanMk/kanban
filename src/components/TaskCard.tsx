@@ -1,14 +1,11 @@
 "use client";
-
 import { Card, Text, Group, Badge, Avatar, Tooltip } from "@mantine/core";
 import { Draggable } from "@hello-pangea/dnd";
 import { IconClock } from "@tabler/icons-react";
 import dayjs from "dayjs";
 import relativeTime from "dayjs/plugin/relativeTime";
-
-// Extend dayjs with relativeTime plugin
+import { Task } from "@/types/api";
 dayjs.extend(relativeTime);
-
 interface FileAttachment {
   id: string;
   name: string;
@@ -17,60 +14,24 @@ interface FileAttachment {
   url: string;
   uploadedAt: string;
 }
-
-interface Comment {
-  id: string;
-  text: string;
-  author: string;
-  createdAt: string;
-  attachments?: FileAttachment[];
-}
-
-interface HistoryEntry {
-  id: string;
-  action: string;
-  author: string;
-  createdAt: string;
-  details?: string;
-}
-
-interface Task {
-  id: string;
-  content: string;
-  title?: string;
-  description?: string;
-  priority?: string;
-  assignees?: string[];
-  authors?: string[];
-  status: string;
-  tags?: string[];
-  comments?: Comment[];
-  history?: HistoryEntry[];
-  createdAt?: string;
-  deadline?: string;
-  actualTime?: number;
-}
-
 interface TaskCardProps {
   card: Task;
   index: number;
   onViewTask: (task: Task) => void;
 }
-
 export default function TaskCard({ card, index, onViewTask }: TaskCardProps) {
   const getPriorityColor = (priority?: string) => {
     switch (priority) {
-      case "high":
+      case "HIGH":
         return "red";
-      case "medium":
+      case "MEDIUM":
         return "yellow";
-      case "low":
+      case "LOW":
         return "green";
       default:
         return "gray";
     }
   };
-
   const isDeadlineNear = (deadline?: string) => {
     if (!deadline) return false;
     const deadlineDate = dayjs(deadline);
@@ -78,20 +39,17 @@ export default function TaskCard({ card, index, onViewTask }: TaskCardProps) {
     const hoursLeft = deadlineDate.diff(now, "hour", true);
     return hoursLeft < 24 && hoursLeft > 0;
   };
-
   const isDeadlinePassed = (deadline?: string) => {
     if (!deadline) return false;
     const deadlineDate = dayjs(deadline);
     const now = dayjs();
     return deadlineDate.isBefore(now);
   };
-
   const formatDeadline = (deadline?: string) => {
     if (!deadline) return "";
     const date = dayjs(deadline);
     const now = dayjs();
     const diffInHours = date.diff(now, "hour", true);
-
     if (diffInHours < 0) {
       return "Overdue";
     } else if (diffInHours < 24) {
@@ -100,7 +58,6 @@ export default function TaskCard({ card, index, onViewTask }: TaskCardProps) {
       return date.format("MM/DD/YYYY");
     }
   };
-
   return (
     <Draggable key={card.id} draggableId={card.id} index={index}>
       {(provided, snapshot) => (
@@ -115,29 +72,14 @@ export default function TaskCard({ card, index, onViewTask }: TaskCardProps) {
           onClick={() => onViewTask(card)}
         >
           <Text fw={500} size="sm" mb="xs">
-            {card.title || card.content}
+            {card.name}
           </Text>
           {card.description && (
             <Text size="xs" c="dimmed" mb="xs" className="line-clamp-2">
               {card.description}
             </Text>
           )}
-          {card.tags && card.tags.length > 0 && (
-            <Group gap="xs" mb="xs">
-              {card.tags.slice(0, 2).map((tag) => (
-                <Badge key={tag} size="xs" variant="light" color="blue">
-                  {tag}
-                </Badge>
-              ))}
-              {card.tags.length > 2 && (
-                <Badge size="xs" variant="outline">
-                  +{card.tags.length - 2}
-                </Badge>
-              )}
-            </Group>
-          )}
 
-          {/* Deadline */}
           {card.deadline && (
             <Group gap="xs" mb="xs">
               <Badge
@@ -156,8 +98,7 @@ export default function TaskCard({ card, index, onViewTask }: TaskCardProps) {
               </Badge>
             </Group>
           )}
-
-          {/* Bottom section with priority and assignees */}
+          {}
           <Group justify="space-between" align="flex-end" mt="xs">
             <Group gap="xs">
               {card.priority && (
@@ -175,17 +116,14 @@ export default function TaskCard({ card, index, onViewTask }: TaskCardProps) {
                 </Badge>
               )}
             </Group>
-
-            {/* Assignees avatars */}
+            {}
             {card.assignees && card.assignees.length > 0 && (
               <Avatar.Group spacing="xs">
                 {card.assignees.slice(0, 3).map((assignee, idx) => (
-                  <Tooltip key={idx} label={assignee} position="top">
+                  <Tooltip key={idx} label={assignee.user.name} position="top">
                     <Avatar size="xs" radius="xl">
-                      {assignee
-                        .split(" ")
-                        .map((n) => n[0])
-                        .join("")}
+                      {assignee.user.avatar ||
+                        (assignee.user.name.charAt(0) || "R").toUpperCase()}
                     </Avatar>
                   </Tooltip>
                 ))}

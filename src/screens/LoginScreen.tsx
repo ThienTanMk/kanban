@@ -1,9 +1,9 @@
 "use client";
-
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { useForm } from "@mantine/form";
-import { z } from "zod";
+import { z } from "zod/v4";
+import { zod4Resolver } from "mantine-form-zod-resolver";
 import {
   Container,
   Paper,
@@ -17,8 +17,14 @@ import {
   Divider,
 } from "@mantine/core";
 import { IconBrandGoogle, IconBrandGithub } from "@tabler/icons-react";
-
-// Zod schema for login form validation
+import { auth } from "@/lib/firebase";
+import {
+  GithubAuthProvider,
+  GoogleAuthProvider,
+  signInWithEmailAndPassword,
+  signInWithPopup,
+} from "firebase/auth";
+import { notifications } from "@mantine/notifications";
 const loginSchema = z.object({
   email: z
     .string()
@@ -27,67 +33,76 @@ const loginSchema = z.object({
   password: z
     .string()
     .min(1, "Password is required")
-    .min(6, "Password must be at least 6 characters long"),
+    .min(8, "Password must be at least 8 characters long")
+    .regex(
+      /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]/,
+      "Password must contain at least one lowercase letter, one uppercase letter, one number, and one special character"
+    ),
 });
-
 export default function LoginScreen() {
   const [loading, setLoading] = useState(false);
   const [socialLoading, setSocialLoading] = useState<string | null>(null);
+
   const router = useRouter();
 
-  // Initialize form with Zod validation
   const form = useForm({
     mode: "uncontrolled",
     initialValues: {
       email: "",
       password: "",
     },
-    validate: {
-      email: (value) => {
-        const result = z.string().email().safeParse(value);
-        return result.success ? null : "Please enter a valid email address";
-      },
-      password: (value) => {
-        const result = z.string().min(6).safeParse(value);
-        return result.success
-          ? null
-          : "Password must be at least 6 characters long";
-      },
-    },
+    validate: zod4Resolver(loginSchema),
   });
+
+  function handleError(code: string) {
+    switch (code) {
+      case "auth/user-not-found":
+        return "No user found with this email";
+      case "auth/wrong-password":
+        return "Incorrect password. Please try again.";
+      case "auth/invalid-email":
+        return "Invalid email address format";
+      case "auth/too-many-requests":
+        return "Too many attempts. Please try again later.";
+      default:
+        return "An unexpected error occurred. Please try again.";
+    }
+  }
 
   const handleLogin = async (values: typeof form.values) => {
     setLoading(true);
     try {
-      // Simulate API call
-      console.log("Login attempt with:", values);
-      setTimeout(() => {
-        setLoading(false);
-        // Navigate to home page after successful login
-        router.push("/");
-      }, 1000);
-    } catch (error) {
+      localStorage.clear();
+      await signInWithEmailAndPassword(auth, values.email, values.password);
+      router.replace("/");
+    } catch (error: any) {
       setLoading(false);
-      console.error("Login failed:", error);
+      const message = handleError(error.code);
+      notifications.show({
+        title: "Login Error",
+        message,
+        color: "red.5",
+      });
     }
   };
-
   const handleSocialLogin = async (provider: "google" | "github") => {
     setSocialLoading(provider);
     try {
-      // Simulate social login API call
-      console.log(`${provider} login attempt`);
-      setTimeout(() => {
-        setSocialLoading(null);
-        // Navigate to home page after successful social login
-        router.push("/");
-      }, 1500);
+      if (provider === "google") {
+        await signInWithPopup(auth, new GoogleAuthProvider());
+        router.replace("/");
+        return;
+      }
+
+      if (provider === "github") {
+        await signInWithPopup(auth, new GithubAuthProvider());
+        router.replace("/");
+      }
     } catch (error) {
       setSocialLoading(null);
       console.error(`${provider} login failed:`, error);
     }
   };
-
   return (
     <div className="min-h-screen bg-gray-50 flex items-center justify-center py-8">
       <Container size="sm" px="md">
@@ -102,7 +117,6 @@ export default function LoginScreen() {
                   Sign in to your account to continue
                 </Text>
               </div>
-
               <TextInput
                 label="Email"
                 placeholder="Enter your email"
@@ -110,7 +124,6 @@ export default function LoginScreen() {
                 {...form.getInputProps("email")}
                 required
               />
-
               <PasswordInput
                 label="Password"
                 placeholder="Enter your password"
@@ -118,11 +131,9 @@ export default function LoginScreen() {
                 {...form.getInputProps("password")}
                 required
               />
-
               <Button fullWidth type="submit" loading={loading} size="md">
                 Sign In
               </Button>
-
               <Divider
                 label={
                   <Text size="sm" c="dimmed">
@@ -131,7 +142,6 @@ export default function LoginScreen() {
                 }
                 labelPosition="center"
               />
-
               <Group grow>
                 <Button
                   variant="default"
@@ -152,7 +162,6 @@ export default function LoginScreen() {
                   GitHub
                 </Button>
               </Group>
-
               <Group justify="center" gap="xs">
                 <Text size="sm" c="dimmed">
                   Don't have an account?

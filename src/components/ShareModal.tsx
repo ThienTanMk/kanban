@@ -1,5 +1,4 @@
 "use client";
-
 import { useState } from "react";
 import {
   Modal,
@@ -13,19 +12,21 @@ import {
   Avatar,
   Badge,
   ActionIcon,
+  Loader,
+  Alert,
 } from "@mantine/core";
-import { IconTrash, IconSend, IconCopy } from "@tabler/icons-react";
+import {
+  IconTrash,
+  IconSend,
+  IconCopy,
+  IconAlertCircle,
+} from "@tabler/icons-react";
 import { notifications } from "@mantine/notifications";
 import dayjs from "dayjs";
-
-interface TeamMember {
-  id: string;
-  email: string;
-  role: string;
-  status: "pending" | "accepted" | "declined";
-  avatar?: string;
-  name?: string;
-}
+import { useGetTeamMemberByProject } from "@/hooks/project";
+import { useGetInvites, useAddInvite, useDeleteInvite } from "@/hooks/invite";
+import { useProjectStore } from "@/stores/projectStore";
+import { ProjectRole, InviteStatus } from "@/types/api";
 
 interface ShareModalProps {
   opened: boolean;
@@ -34,63 +35,64 @@ interface ShareModalProps {
 
 export default function ShareModal({ opened, onClose }: ShareModalProps) {
   const [email, setEmail] = useState("");
-  const [role, setRole] = useState("member");
-  const [inviteLink] = useState("https://kanban-app.com/invite/abc123xyz");
-  const [teamMembers, setTeamMembers] = useState<TeamMember[]>([
-    {
-      id: "1",
-      email: "john.doe@example.com",
-      name: "John Doe",
-      role: "admin",
-      status: "accepted",
-      avatar:
-        "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=40",
-    },
-    {
-      id: "2",
-      email: "jane.smith@example.com",
-      name: "Jane Smith",
-      role: "member",
-      status: "accepted",
-      avatar:
-        "https://images.unsplash.com/photo-1494790108755-2616b612b786?w=40",
-    },
-    {
-      id: "3",
-      email: "bob.johnson@example.com",
-      role: "viewer",
-      status: "pending",
-    },
-  ]);
+  const [role, setRole] = useState<ProjectRole>(ProjectRole.MEMBER);
+  const [isInviting, setIsInviting] = useState(false);
+  const [hasInviteSent, setHasInviteSent] = useState(false);
 
-  const handleSendInvite = () => {
-    if (!email) return;
+  const { currentProjectId } = useProjectStore();
+  const { data: teamMembers, isLoading: membersLoading } =
+    useGetTeamMemberByProject();
+  const { data: invites, isLoading: invitesLoading } = useGetInvites();
+  const { mutateAsync: addInvite } = useAddInvite();
 
-    const newMember: TeamMember = {
-      id: `member-${dayjs().valueOf()}`,
-      email,
-      role,
-      status: "pending",
-    };
+  const { mutateAsync: deleteInvite } = useDeleteInvite();
+  const [inviteId, setInviteId] = useState<string | null>(null);
 
-    setTeamMembers([...teamMembers, newMember]);
-    setEmail("");
-    setRole("member");
+  const inviteLink = currentProjectId
+    ? `${window.location.origin}/login?joinId=${inviteId}`
+    : "";
 
-    notifications.show({
-      title: "Invite sent!",
-      message: `Invitation sent to ${email}`,
-      color: "green",
-    });
+  const handleSendInvite = async () => {
+    if (!email.trim()) return;
+
+    setIsInviting(true);
+    try {
+      const res = await addInvite({ email: email.trim(), role });
+      setInviteId(res.id);
+      setHasInviteSent(true);
+      notifications.show({
+        title: "Invite sent!",
+        message: `Invitation sent to ${email} as ${role}`,
+        color: "green",
+      });
+      setEmail("");
+    } catch (error) {
+      notifications.show({
+        title: "Failed to send invite",
+        message: "Please try again",
+        color: "red",
+      });
+      console.error("Failed to send invite:", error);
+    } finally {
+      setIsInviting(false);
+    }
   };
-
-  const handleRemoveMember = (memberId: string) => {
-    setTeamMembers(teamMembers.filter((member) => member.id !== memberId));
-    notifications.show({
-      title: "Member removed",
-      message: "Team member has been removed from the project",
-      color: "red",
-    });
+  const handleRemoveInvite = async (inviteId: string) => {
+    try {
+      await deleteInvite(inviteId);
+      notifications.show({
+        title: "Invite removed",
+        message: "Invitation has been cancelled",
+        color: "blue",
+      });
+    } catch (error) {
+      notifications.show({
+        title: "Failed to remove invite",
+        message: "Please try again",
+        color: "red",
+      });
+      console.error("Failed to remove invite:", error);
+    }
   };
 
   const copyInviteLink = () => {
@@ -102,6 +104,28 @@ export default function ShareModal({ opened, onClose }: ShareModalProps) {
     });
   };
 
+  const handleRemoveMember = async (userId: string) => {
+    try {
+      // Note: This would need a proper API endpoint to remove team member
+      // For now, we'll show a notification that this feature is coming soon
+      notifications.show({
+        title: "Feature coming soon",
+        message: "Remove member functionality will be available soon",
+        color: "blue",
+      });
+    } catch (error) {
+      notifications.show({
+        title: "Failed to remove member",
+        message: "Please try again",
+        color: "red",
+      });
+      console.error("Failed to remove member:", error);
+    }
+  };
+
+  const isValidEmail = (email: string) => {
+    return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+  };
   return (
     <Modal opened={opened} onClose={onClose} title="Share Project" size="md">
       <Stack gap="lg">
@@ -120,96 +144,183 @@ export default function ShareModal({ opened, onClose }: ShareModalProps) {
                 }
               }}
             />
-            <Group gap="sm">
+            <Group gap="sm" align="end">
               <Select
+                label="Role"
                 value={role}
-                onChange={(value) => setRole(value || "member")}
+                onChange={(value) =>
+                  setRole((value as ProjectRole) || ProjectRole.MEMBER)
+                }
                 data={[
-                  { value: "admin", label: "Admin" },
-                  { value: "member", label: "Member" },
-                  { value: "viewer", label: "Viewer" },
+                  { value: ProjectRole.ADMIN, label: "Admin" },
+                  { value: ProjectRole.MEMBER, label: "Member" },
+                  { value: ProjectRole.VIEWER, label: "Viewer" },
                 ]}
                 style={{ flex: 1 }}
               />
               <Button
                 leftSection={<IconSend size={16} />}
                 onClick={handleSendInvite}
-                disabled={!email}
+                disabled={!email.trim() || !isValidEmail(email.trim())}
+                loading={isInviting}
+                variant="filled"
+                color="blue"
               >
-                Send Invite
+                Send
               </Button>
             </Group>
           </Stack>
         </div>
 
+        {hasInviteSent && (
+          <div>
+            <Text size="sm" fw={500} mb="xs">
+              Share link
+            </Text>
+            <Group gap="sm">
+              <TextInput value={inviteLink} readOnly style={{ flex: 1 }} />
+              <Button
+                variant="outline"
+                leftSection={<IconCopy size={16} />}
+                onClick={copyInviteLink}
+              >
+                Copy
+              </Button>
+            </Group>
+          </div>
+        )}
+
         <div>
           <Text size="sm" fw={500} mb="xs">
-            Or share link
+            Team Members ({teamMembers?.length || 0})
           </Text>
-          <Group gap="sm">
-            <TextInput value={inviteLink} readOnly style={{ flex: 1 }} />
-            <Button
-              variant="outline"
-              leftSection={<IconCopy size={16} />}
-              onClick={copyInviteLink}
-            >
-              Copy
-            </Button>
-          </Group>
+          <Stack gap="xs">
+            {teamMembers && teamMembers.length > 0 ? (
+              teamMembers.map((member) => (
+                <Paper key={member.userId} p="sm" withBorder>
+                  <Group justify="space-between">
+                    <Group gap="sm">
+                      <Avatar src={member.user.avatar} size="sm" radius="xl">
+                        {member.user.name
+                          ? member.user.name[0].toUpperCase()
+                          : member.user.email[0].toUpperCase()}
+                      </Avatar>
+                      <div>
+                        <Text size="sm" fw={500}>
+                          {member.user.name || member.user.email}
+                        </Text>
+                        <Text size="xs" c="dimmed">
+                          {member.user.email}
+                        </Text>
+                      </div>
+                    </Group>
+                    <Group gap="xs">
+                      <Badge
+                        variant="light"
+                        size="sm"
+                        color={
+                          member.role === ProjectRole.OWNER
+                            ? "grape"
+                            : member.role === ProjectRole.ADMIN
+                            ? "red"
+                            : member.role === ProjectRole.MEMBER
+                            ? "blue"
+                            : "gray"
+                        }
+                      >
+                        {member.role}
+                      </Badge>
+                      {member.role !== ProjectRole.OWNER && (
+                        <ActionIcon
+                          variant="subtle"
+                          color="red"
+                          size="sm"
+                          onClick={() => handleRemoveMember(member.userId)}
+                        >
+                          <IconTrash size={14} />
+                        </ActionIcon>
+                      )}
+                    </Group>
+                  </Group>
+                </Paper>
+              ))
+            ) : (
+              <Text size="sm" c="dimmed" ta="center" py="lg">
+                No team members yet
+              </Text>
+            )}
+          </Stack>
         </div>
 
         <div>
           <Text size="sm" fw={500} mb="xs">
-            Team Members ({teamMembers.length})
+            Invited Members ({invites?.length || 0})
           </Text>
           <Stack gap="xs">
-            {teamMembers.map((member) => (
-              <Paper key={member.id} p="sm" withBorder>
-                <Group justify="space-between">
-                  <Group gap="sm">
-                    <Avatar src={member.avatar} size="sm" radius="xl">
-                      {member.name ? member.name[0] : member.email[0]}
-                    </Avatar>
-                    <div>
-                      <Text size="sm" fw={500}>
-                        {member.name || member.email}
-                      </Text>
-                      {member.name && (
-                        <Text size="xs" c="dimmed">
-                          {member.email}
+            {invites && invites.length > 0 ? (
+              invites.map((invite) => (
+                <Paper key={invite.id} p="sm" withBorder>
+                  <Group justify="space-between">
+                    <Group gap="sm">
+                      <Avatar size="sm" radius="xl">
+                        {invite.email[0].toUpperCase()}
+                      </Avatar>
+                      <div>
+                        <Text size="sm" fw={500}>
+                          {invite.email}
                         </Text>
-                      )}
-                    </div>
+                        <Group gap="xs" mt={2}>
+                          <Text size="xs" c="dimmed">
+                            Invited •{" "}
+                            {dayjs(invite.createdAt).format("MMM DD, YYYY")}
+                          </Text>
+                          <Badge
+                            variant="outline"
+                            size="xs"
+                            color={
+                              invite.role === ProjectRole.ADMIN
+                                ? "red"
+                                : invite.role === ProjectRole.MEMBER
+                                ? "blue"
+                                : "gray"
+                            }
+                          >
+                            {invite.role}
+                          </Badge>
+                        </Group>
+                      </div>
+                    </Group>
+                    <Group gap="xs">
+                      <Badge
+                        variant="light"
+                        size="sm"
+                        color={
+                          invite.status === InviteStatus.PENDING
+                            ? "yellow"
+                            : invite.status === InviteStatus.ACCEPTED
+                            ? "green"
+                            : "red"
+                        }
+                      >
+                        {invite.status}
+                      </Badge>
+                      <ActionIcon
+                        variant="subtle"
+                        color="red"
+                        size="sm"
+                        onClick={() => handleRemoveInvite(invite.id)}
+                      >
+                        <IconTrash size={14} />
+                      </ActionIcon>
+                    </Group>
                   </Group>
-                  <Group gap="xs">
-                    <Badge
-                      color={
-                        member.status === "accepted"
-                          ? "green"
-                          : member.status === "pending"
-                          ? "yellow"
-                          : "red"
-                      }
-                      variant="light"
-                      size="sm"
-                    >
-                      {member.status}
-                    </Badge>
-                    <Badge variant="outline" size="sm">
-                      {member.role}
-                    </Badge>
-                    <ActionIcon
-                      variant="subtle"
-                      color="red"
-                      size="sm"
-                      onClick={() => handleRemoveMember(member.id)}
-                    >
-                      <IconTrash size={14} />
-                    </ActionIcon>
-                  </Group>
-                </Group>
-              </Paper>
-            ))}
+                </Paper>
+              ))
+            ) : (
+              <Text size="sm" c="dimmed" ta="center" py="lg">
+                No pending invitations
+              </Text>
+            )}
           </Stack>
         </div>
       </Stack>

@@ -1,5 +1,4 @@
 "use client";
-
 import { Dispatch, SetStateAction } from "react";
 import {
   DragDropContext,
@@ -10,7 +9,6 @@ import {
 import { Button, TextInput, Paper } from "@mantine/core";
 import { IconPlus, IconX, IconCheck } from "@tabler/icons-react";
 import KanbanColumn from "./KanbanColumn";
-
 interface FileAttachment {
   id: string;
   name: string;
@@ -19,7 +17,6 @@ interface FileAttachment {
   url: string;
   uploadedAt: string;
 }
-
 interface Comment {
   id: string;
   text: string;
@@ -27,7 +24,6 @@ interface Comment {
   createdAt: string;
   attachments?: FileAttachment[];
 }
-
 interface HistoryEntry {
   id: string;
   action: string;
@@ -35,7 +31,6 @@ interface HistoryEntry {
   createdAt: string;
   details?: string;
 }
-
 interface Task {
   id: string;
   content: string;
@@ -52,13 +47,11 @@ interface Task {
   deadline?: string;
   actualTime?: number;
 }
-
 interface Column {
   id: string;
   title: string;
   cards: Task[];
 }
-
 interface KanbanProps {
   columns: any[];
   onDragEnd: (result: DropResult) => void;
@@ -73,7 +66,6 @@ interface KanbanProps {
   newColumnTitle: string;
   setNewColumnTitle: Dispatch<SetStateAction<string>>;
 }
-
 export default function Kanban({
   columns,
   onDragEnd,
@@ -94,7 +86,6 @@ export default function Kanban({
       setNewColumnTitle("");
     }
   };
-
   const handleKeyPress = (event: React.KeyboardEvent) => {
     if (event.key === "Enter") {
       handleAddColumnSubmit();
@@ -103,7 +94,6 @@ export default function Kanban({
       setNewColumnTitle("");
     }
   };
-
   return (
     <DragDropContext onDragEnd={onDragEnd}>
       <Droppable droppableId="columns" direction="horizontal" type="COLUMN">
@@ -138,8 +128,6 @@ export default function Kanban({
               </Draggable>
             ))}
             {provided.placeholder}
-
-            {/* Add Column Component */}
             <div className="min-w-[280px] flex-shrink-0">
               {isAddingColumn ? (
                 <Paper p="sm" className="bg-gray-100 rounded-lg">

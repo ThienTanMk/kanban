@@ -1,6 +1,5 @@
 "use client";
-
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import {
   Modal,
   Text,
@@ -20,7 +19,6 @@ import {
   NumberInput,
   FileInput,
   Card,
-  Anchor,
 } from "@mantine/core";
 import { DateTimePicker } from "@mantine/dates";
 import {
@@ -39,10 +37,27 @@ import {
 } from "@tabler/icons-react";
 import dayjs from "dayjs";
 import relativeTime from "dayjs/plugin/relativeTime";
-
-// Extend dayjs with relativeTime plugin
+import {
+  Task,
+  Priority,
+  UpdateTaskDto,
+  TaskUpdateRequest,
+  Comment,
+} from "@/types/api";
+import { useGetAvailableUsers } from "@/hooks/user";
+import { useGetStatuses } from "@/hooks/status";
+import { useGetEventByTaskId } from "@/hooks/event";
+import omit from "lodash/omit";
+import {
+  useAddComment,
+  useDeleteComment,
+  useGetCommentByTaskId,
+  useUpdateComment,
+} from "@/hooks/comment";
+import { updateComment } from "@/services/commentApi";
+import { useDeleteTask, useTask, useUpdateTask } from "@/hooks/task";
+import { queryClient } from "@/services/queryClient";
 dayjs.extend(relativeTime);
-
 interface FileAttachment {
   id: string;
   name: string;
@@ -51,57 +66,20 @@ interface FileAttachment {
   url: string;
   uploadedAt: string;
 }
-
-interface Comment {
-  id: string;
-  text: string;
-  author: string;
-  createdAt: string;
-  attachments?: FileAttachment[];
-}
-
-interface HistoryEntry {
-  id: string;
-  action: string;
-  author: string;
-  createdAt: string;
-  details?: string;
-}
-
-interface Task {
-  id: string;
-  content: string;
-  title?: string;
-  description?: string;
-  priority?: string;
-  assignees?: string[];
-  authors?: string[];
-  status: string;
-  tags?: string[];
-  comments?: Comment[];
-  history?: HistoryEntry[];
-  createdAt?: string;
-  deadline?: string;
-  actualTime?: number;
-}
-
 interface TaskDetailModalProps {
-  opened: boolean;
+  taskId: string;
   onClose: () => void;
-  task: Task | null;
-  onEdit: (task: Task) => void;
-  onDelete: (taskId: string) => void;
+  opened: boolean;
 }
-
 export default function TaskDetailModal({
-  opened,
+  taskId,
   onClose,
-  task,
-  onEdit,
-  onDelete,
+  opened,
 }: TaskDetailModalProps) {
   const [isEditing, setIsEditing] = useState(false);
-  const [editedTask, setEditedTask] = useState<Task | null>(null);
+  const [editedTask, setEditedTask] = useState<
+    (Task & { assigneeIds: string[] }) | null
+  >(null);
   const [newComment, setNewComment] = useState("");
   const [commentFiles, setCommentFiles] = useState<File[]>([]);
   const [activeTab, setActiveTab] = useState<"comments" | "history">(
@@ -109,204 +87,142 @@ export default function TaskDetailModal({
   );
   const [editingCommentId, setEditingCommentId] = useState<string | null>(null);
   const [editedCommentText, setEditedCommentText] = useState("");
+  const [isUpdating, setIsUpdating] = useState(false);
+  const [isAddingComment, setIsAddingComment] = useState(false);
+  const { data: availableUsers } = useGetAvailableUsers();
+  const { data: events } = useGetEventByTaskId(taskId);
+  const { data: comments } = useGetCommentByTaskId(taskId);
+  const { mutateAsync: addComment } = useAddComment(taskId);
+  const { mutateAsync: deleteCommentMutation } = useDeleteComment(taskId);
+  const { mutateAsync: updateTask } = useUpdateTask();
+  const { mutateAsync: deleteTask } = useDeleteTask();
+  const { mutateAsync: updateComment } = useUpdateComment();
 
-  // Available users - in real app this would come from API
-  const availableUsers = [
-    "John Doe",
-    "Jane Smith",
-    "Bob Johnson",
-    "Alice Brown",
-    "Charlie Wilson",
-    "Diana Prince",
-  ];
-
-  if (!task) return null;
-
+  const { data: _task } = useTask(taskId);
+  const task = useMemo(() => {
+    if (!_task) return null;
+    return {
+      ..._task,
+      assigneeIds: _task?.assignees?.map((a) => a.userId) || [],
+    };
+  }, [_task]);
   const getPriorityColor = (priority?: string) => {
     switch (priority) {
-      case "high":
+      case "HIGH":
         return "red";
-      case "medium":
+      case "MEDIUM":
         return "yellow";
-      case "low":
+      case "LOW":
         return "green";
       default:
         return "gray";
     }
   };
-
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case "Backlog":
-        return "gray";
-      case "To Do":
-        return "orange";
-      case "In Progress":
-        return "blue";
-      case "Code Review":
-        return "purple";
-      case "Testing":
-        return "cyan";
-      case "Done":
-        return "green";
-      default:
-        return "gray";
-    }
-  };
-
+  const { data: statuses } = useGetStatuses();
   const handleEdit = () => {
     setEditedTask(task);
     setIsEditing(true);
   };
-
-  const handleSaveEdit = () => {
+  const handleSaveEdit = async () => {
     if (editedTask) {
-      // Add history entry for edit
-      const updatedTask = {
-        ...editedTask,
-        history: [
-          ...(editedTask.history || []),
-          {
-            id: `h-${dayjs().valueOf()}`,
-            action: "Updated task",
-            author: "Current User",
-            createdAt: dayjs().toISOString(),
-            details: "Task details updated",
-          },
-        ],
-      };
-      onEdit(updatedTask);
-      setIsEditing(false);
-      setEditedTask(null);
+      setIsUpdating(true);
+      try {
+        const updatedTask: UpdateTaskDto = {
+          title: editedTask.name,
+          description: editedTask.description,
+          priority: editedTask.priority as Priority,
+          statusId: editedTask.statusId,
+          dueDate: editedTask.deadline
+            ? new Date(editedTask.deadline)
+            : undefined,
+          // Note: assigneeIds and actualTime might need separate API calls
+        };
+
+        await updateTask({
+          id: taskId,
+          data: updatedTask,
+        });
+
+        setIsEditing(false);
+        setEditedTask(null);
+      } catch (error) {
+        console.error("Failed to update task:", error);
+      } finally {
+        setIsUpdating(false);
+      }
     }
   };
-
   const handleCancelEdit = () => {
     setIsEditing(false);
     setEditedTask(null);
   };
-
-  const handleAddComment = () => {
+  const handleAddComment = async () => {
     if (!newComment.trim() && commentFiles.length === 0) return;
 
-    // Create file attachments (in real app, upload files to server first)
-    const attachments: FileAttachment[] = commentFiles.map((file, index) => ({
-      id: `att-${dayjs().valueOf()}-${index}`,
-      name: file.name,
-      size: file.size,
-      type: file.type,
-      url: URL.createObjectURL(file), // In real app, this would be server URL
-      uploadedAt: dayjs().toISOString(),
-    }));
+    setIsAddingComment(true);
+    try {
+      // For now, we'll just add the text comment
+      // File attachments would need separate upload handling
+      await addComment(newComment);
 
-    const updatedTask = {
-      ...task,
-      comments: [
-        ...(task.comments || []),
-        {
-          id: `c-${dayjs().valueOf()}`,
-          text: newComment,
-          author: "Current User",
-          createdAt: dayjs().toISOString(),
-          attachments: attachments.length > 0 ? attachments : undefined,
-        },
-      ],
-      history: [
-        ...(task.history || []),
-        {
-          id: `h-${dayjs().valueOf()}`,
-          action:
-            attachments.length > 0
-              ? "Added comment with attachments"
-              : "Added comment",
-          author: "Current User",
-          createdAt: dayjs().toISOString(),
-          details: newComment || `${attachments.length} file(s) attached`,
-        },
-      ],
-    };
-
-    onEdit(updatedTask);
-    setNewComment("");
-    setCommentFiles([]);
+      setNewComment("");
+      setCommentFiles([]);
+    } catch (error) {
+      console.error("Failed to add comment:", error);
+    } finally {
+      setIsAddingComment(false);
+    }
   };
-
   const handleEditComment = (commentId: string, currentText: string) => {
     setEditingCommentId(commentId);
     setEditedCommentText(currentText);
   };
+  const handleSaveComment = async (commentId: string) => {
+    if (!task || !editedCommentText.trim()) return;
 
-  const handleSaveComment = (commentId: string) => {
-    if (!task) return;
-
-    const updatedTask = {
-      ...task,
-      comments: task.comments?.map((comment) =>
-        comment.id === commentId
-          ? { ...comment, text: editedCommentText }
-          : comment
-      ),
-      history: [
-        ...(task.history || []),
-        {
-          id: `h-${dayjs().valueOf()}`,
-          action: "Edited comment",
-          author: "Current User",
-          createdAt: dayjs().toISOString(),
-          details: "Comment was modified",
-        },
-      ],
-    };
-
-    onEdit(updatedTask);
-    setEditingCommentId(null);
-    setEditedCommentText("");
+    try {
+      await updateComment({ id: commentId, content: editedCommentText });
+      setEditingCommentId(null);
+      setEditedCommentText("");
+    } catch (error) {
+      console.error("Failed to update comment:", error);
+    }
   };
-
   const handleCancelEditComment = () => {
     setEditingCommentId(null);
     setEditedCommentText("");
   };
-
-  const handleDeleteComment = (commentId: string) => {
+  const handleDeleteComment = async (commentId: string) => {
     if (!task) return;
 
-    const updatedTask = {
-      ...task,
-      comments: task.comments?.filter((comment) => comment.id !== commentId),
-      history: [
-        ...(task.history || []),
-        {
-          id: `h-${dayjs().valueOf()}`,
-          action: "Deleted comment",
-          author: "Current User",
-          createdAt: dayjs().toISOString(),
-          details: "Comment was removed",
-        },
-      ],
-    };
-
-    onEdit(updatedTask);
+    try {
+      await deleteCommentMutation(commentId);
+    } catch (error) {
+      console.error("Failed to delete comment:", error);
+    }
   };
-
-  const handleDelete = () => {
-    onDelete(task.id);
-    onClose();
+  const handleDelete = async () => {
+    try {
+      await deleteTask(taskId);
+      onClose();
+    } catch (error) {
+      console.error("Failed to delete task:", error);
+    }
   };
-
   const handleRemoveTag = (tagToRemove: string) => {
     if (editedTask) {
       setEditedTask({
         ...editedTask,
-        tags: editedTask.tags?.filter((tag) => tag !== tagToRemove) || [],
       });
     }
   };
-
   const formatDate = (dateString: string) => {
     return dayjs(dateString).format("MMM DD, YYYY HH:mm");
   };
 
+  console.log("TaskDetailModal taskId:", task);
+
+  if (!taskId || !task) return null;
   return (
     <Modal
       opened={opened}
@@ -334,16 +250,15 @@ export default function TaskDetailModal({
       centered
     >
       <Stack gap="md">
-        {/* Task Header */}
         <div>
           {isEditing ? (
             <Stack gap="sm">
               <TextInput
                 label="Title"
-                value={editedTask?.title || editedTask?.content || ""}
+                value={editedTask?.name || ""}
                 onChange={(e) =>
                   setEditedTask(
-                    editedTask ? { ...editedTask, title: e.target.value } : null
+                    editedTask ? { ...editedTask, name: e.target.value } : null
                   )
                 }
               />
@@ -371,59 +286,61 @@ export default function TaskDetailModal({
                     )
                   }
                   data={[
-                    { value: "high", label: "High" },
-                    { value: "medium", label: "Medium" },
-                    { value: "low", label: "Low" },
+                    { value: "HIGH", label: "High" },
+                    { value: "MEDIUM", label: "Medium" },
+                    { value: "LOW", label: "Low" },
                   ]}
                   style={{ flex: 1 }}
                 />
                 <Select
                   label="Status"
-                  value={editedTask?.status || ""}
+                  value={editedTask?.statusId || ""}
                   onChange={(value) =>
                     setEditedTask(
                       editedTask
-                        ? { ...editedTask, status: value || "Backlog" }
+                        ? { ...editedTask, statusId: value || "Backlog" }
                         : null
                     )
                   }
-                  data={[
-                    { value: "Backlog", label: "Backlog" },
-                    { value: "To Do", label: "To Do" },
-                    { value: "In Progress", label: "In Progress" },
-                    { value: "Code Review", label: "Code Review" },
-                    { value: "Testing", label: "Testing" },
-                    { value: "Done", label: "Done" },
-                  ]}
+                  data={
+                    statuses?.map((status) => ({
+                      value: status.id,
+                      label: status.name,
+                    })) || []
+                  }
                   style={{ flex: 1 }}
                 />
               </Group>
               <MultiSelect
                 label="Assignees"
-                value={editedTask?.assignees || []}
+                value={editedTask?.assigneeIds || []}
                 onChange={(value) =>
                   setEditedTask(
-                    editedTask ? { ...editedTask, assignees: value } : null
+                    editedTask ? { ...editedTask, assigneeIds: value } : null
                   )
                 }
-                data={availableUsers.map((user) => ({
-                  value: user,
-                  label: user,
-                }))}
+                data={
+                  availableUsers?.map((user) => ({
+                    value: user.id,
+                    label: user.name,
+                  })) || []
+                }
                 searchable
               />
-              <MultiSelect
+              <Select
                 label="Authors"
-                value={editedTask?.authors || []}
+                value={editedTask?.ownerId as string}
                 onChange={(value) =>
                   setEditedTask(
-                    editedTask ? { ...editedTask, authors: value } : null
+                    editedTask ? { ...editedTask, ownerId: value || "" } : null
                   )
                 }
-                data={availableUsers.map((user) => ({
-                  value: user,
-                  label: user,
-                }))}
+                data={
+                  availableUsers?.map((user) => ({
+                    value: user.id,
+                    label: user.name,
+                  })) || []
+                }
                 searchable
                 disabled
                 description="Authors cannot be modified"
@@ -439,12 +356,15 @@ export default function TaskDetailModal({
                   onChange={(value) =>
                     setEditedTask(
                       editedTask
-                        ? {
-                            ...editedTask,
-                            deadline: value
-                              ? dayjs(value).toISOString()
-                              : undefined,
-                          }
+                        ? value
+                          ? {
+                              ...editedTask,
+                              deadline: dayjs(value).toISOString(),
+                            }
+                          : (() => {
+                              const { deadline, ...rest } = editedTask;
+                              return { ...rest, deadline: "" };
+                            })()
                         : null
                     )
                   }
@@ -467,38 +387,24 @@ export default function TaskDetailModal({
                   style={{ flex: 1 }}
                 />
               </Group>
-              <MultiSelect
-                label="Tags"
-                value={editedTask?.tags || []}
-                onChange={(value) =>
-                  setEditedTask(
-                    editedTask ? { ...editedTask, tags: value } : null
-                  )
-                }
-                data={[
-                  "urgent",
-                  "bug",
-                  "feature",
-                  "enhancement",
-                  "documentation",
-                  "testing",
-                  "design",
-                  "backend",
-                  "frontend",
-                ]}
-                searchable
-              />
+
               <Group gap="sm" justify="end">
-                <Button variant="outline" onClick={handleCancelEdit}>
+                <Button
+                  variant="outline"
+                  onClick={handleCancelEdit}
+                  disabled={isUpdating}
+                >
                   Cancel
                 </Button>
-                <Button onClick={handleSaveEdit}>Save Changes</Button>
+                <Button onClick={handleSaveEdit} loading={isUpdating}>
+                  Save Changes
+                </Button>
               </Group>
             </Stack>
           ) : (
             <>
               <Text size="xl" fw={600} mb="xs">
-                {task.title || task.content}
+                {task.name}
               </Text>
               {task.description && (
                 <Text c="dimmed" mb="md">
@@ -514,8 +420,8 @@ export default function TaskDetailModal({
                     {task.priority}
                   </Badge>
                 )}
-                <Badge color={getStatusColor(task.status)} variant="outline">
-                  {task.status}
+                <Badge color="blue" variant="outline">
+                  {task.status?.name}
                 </Badge>
                 {task.deadline && (
                   <Badge variant="light" leftSection={<IconClock size={12} />}>
@@ -533,8 +439,7 @@ export default function TaskDetailModal({
                   </Badge>
                 )}
               </Group>
-
-              {/* Assignees */}
+              {}
               {task.assignees && task.assignees.length > 0 && (
                 <Group gap="xs" mb="md">
                   <IconUser size={16} />
@@ -544,41 +449,21 @@ export default function TaskDetailModal({
                   <Avatar.Group spacing="xs">
                     {task.assignees.map((assignee, idx) => (
                       <Badge key={idx} variant="light" color="blue">
-                        {assignee}
+                        {assignee.user.name}
                       </Badge>
                     ))}
                   </Avatar.Group>
                 </Group>
               )}
-
-              {/* Authors */}
-              {task.authors && task.authors.length > 0 && (
+              {task.owner && (
                 <Group gap="xs" mb="md">
                   <IconUsers size={16} />
                   <Text size="sm" fw={500}>
-                    Authors:
+                    Authors: {task.owner.name}
                   </Text>
-                  <Group gap="xs">
-                    {task.authors.map((author, idx) => (
-                      <Badge key={idx} variant="light" color="green">
-                        {author}
-                      </Badge>
-                    ))}
-                  </Group>
-                </Group>
-              )}
-              {task.tags && task.tags.length > 0 && (
-                <Group gap="xs" mb="md">
-                  <IconTag size={16} />
-                  {task.tags.map((tag) => (
-                    <Badge key={tag} size="sm" variant="light" color="blue">
-                      {tag}
-                    </Badge>
-                  ))}
                 </Group>
               )}
 
-              {/* Edit Button */}
               {!isEditing && (
                 <Group justify="end" mt="md">
                   <Button
@@ -592,32 +477,29 @@ export default function TaskDetailModal({
             </>
           )}
         </div>
-
         <Divider />
-
-        {/* Tabs */}
+        {}
         <Group gap="sm">
           <Button
             variant={activeTab === "comments" ? "filled" : "subtle"}
             size="sm"
             onClick={() => setActiveTab("comments")}
           >
-            Comments ({task.comments?.length || 0})
+            Comments ({comments?.length || 0})
           </Button>
           <Button
             variant={activeTab === "history" ? "filled" : "subtle"}
             size="sm"
             onClick={() => setActiveTab("history")}
           >
-            History ({task.history?.length || 0})
+            History ({events?.length || 0})
           </Button>
         </Group>
-
-        {/* Tab Content */}
+        {}
         <ScrollArea.Autosize mah={300}>
           {activeTab === "comments" && (
             <Stack gap="md">
-              {/* Add Comment */}
+              {}
               <Paper p="md" withBorder>
                 <Stack gap="sm">
                   <Textarea
@@ -647,7 +529,11 @@ export default function TaskDetailModal({
                     <Button
                       leftSection={<IconSend size={16} />}
                       onClick={handleAddComment}
-                      disabled={!newComment.trim() && commentFiles.length === 0}
+                      disabled={
+                        (!newComment.trim() && commentFiles.length === 0) ||
+                        isAddingComment
+                      }
+                      loading={isAddingComment}
                       size="sm"
                     >
                       Add Comment
@@ -655,15 +541,14 @@ export default function TaskDetailModal({
                   </Group>
                 </Stack>
               </Paper>
-
-              {/* Comments List */}
-              {task.comments && task.comments.length > 0 ? (
+              {}
+              {comments && comments.length > 0 ? (
                 <Stack gap="sm">
-                  {task.comments.map((comment) => (
+                  {comments.map((comment: Comment) => (
                     <Paper key={comment.id} p="md" withBorder>
                       <Group gap="sm" align="flex-start">
                         <Avatar size="sm" radius="xl">
-                          {comment.author[0]}
+                          {(comment.user.name.charAt(0) || "R").toUpperCase()}
                         </Avatar>
                         <div style={{ flex: 1 }}>
                           <Group
@@ -673,7 +558,7 @@ export default function TaskDetailModal({
                           >
                             <Group gap="xs">
                               <Text size="sm" fw={500}>
-                                {comment.author}
+                                {comment.user.name}
                               </Text>
                               <Text size="xs" c="dimmed">
                                 {formatDate(comment.createdAt)}
@@ -685,7 +570,7 @@ export default function TaskDetailModal({
                                 variant="subtle"
                                 color="blue"
                                 onClick={() =>
-                                  handleEditComment(comment.id, comment.text)
+                                  handleEditComment(comment.id, comment.content)
                                 }
                               >
                                 <IconEdit size={14} />
@@ -700,7 +585,6 @@ export default function TaskDetailModal({
                               </ActionIcon>
                             </Group>
                           </Group>
-
                           {editingCommentId === comment.id ? (
                             <Stack gap="xs">
                               <Textarea
@@ -732,22 +616,14 @@ export default function TaskDetailModal({
                               </Group>
                             </Stack>
                           ) : (
-                            comment.text && (
+                            comment.content && (
                               <Text size="sm" mb="xs">
-                                {comment.text}
+                                {comment.content}
                               </Text>
                             )
                           )}
-
-                          {/* File attachments */}
-                          {comment.attachments &&
-                            comment.attachments.length > 0 && (
-                              <Stack gap="xs" mt="sm">
-                                <Text size="xs" fw={500} c="dimmed">
-                                  Attachments:
-                                </Text>
-                                {comment.attachments.map((file) => (
-                                  <Card key={file.id} p="xs" withBorder>
+                          {/* {comment.file &&
+                            (<Card key={file.id} p="xs" withBorder>
                                     <Group gap="xs">
                                       <IconFile size={16} />
                                       <div style={{ flex: 1 }}>
@@ -769,10 +645,7 @@ export default function TaskDetailModal({
                                         <IconDownload size={14} />
                                       </ActionIcon>
                                     </Group>
-                                  </Card>
-                                ))}
-                              </Stack>
-                            )}
+                                  </Card>)} */}
                         </div>
                       </Group>
                     </Paper>
@@ -785,11 +658,10 @@ export default function TaskDetailModal({
               )}
             </Stack>
           )}
-
           {activeTab === "history" && (
             <Stack gap="sm">
-              {task.history && task.history.length > 0 ? (
-                task.history.map((entry) => (
+              {events && events.length > 0 ? (
+                events.map((entry: any) => (
                   <Paper key={entry.id} p="md" withBorder>
                     <Group gap="sm" align="flex-start">
                       <Avatar size="sm" radius="xl">
@@ -824,9 +696,7 @@ export default function TaskDetailModal({
             </Stack>
           )}
         </ScrollArea.Autosize>
-
         <Divider />
-
         <Group justify="end">
           <Button variant="outline" onClick={onClose}>
             Close
