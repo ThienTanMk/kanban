@@ -1,6 +1,7 @@
 import {
   Project,
   ProjectCreateRequest,
+  ProjectRole,
   ProjectUpdateRequest,
   UsersOnProject,
 } from "../types/api";
@@ -35,6 +36,11 @@ export const projectApi = {
 
   getTeamMembers: async (projectId: string): Promise<UsersOnProject[]> => {
     const response = await instance.get(`/projects/${projectId}/team`);
+    return response.data;
+  },
+
+  getRoleOnProject: async (projectId: string): Promise<ProjectRole> => {
+    const response = await instance.get(`/projects/${projectId}/role`);
     return response.data;
   },
 };

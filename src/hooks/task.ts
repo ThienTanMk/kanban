@@ -1,7 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { taskApi } from "../services/taskApi";
 import { useProjectStore } from "../stores/projectStore";
-import { TaskCreateRequest, TaskUpdateRequest, Task } from "../types/api";
+import { Task, CreateTaskDto } from "../types/api";
 import { queryClient } from "@/services/queryClient";
 import { useAuth } from "./useAuth";
 export const taskKeys = {
@@ -41,7 +41,7 @@ export const useCreateTask = () => {
   const { currentProjectId } = useProjectStore();
   const { uid } = useAuth();
   return useMutation({
-    mutationFn: (data: TaskCreateRequest) => taskApi.createTask(data),
+    mutationFn: (data: CreateTaskDto) => taskApi.createTask(data),
     onSuccess: (response) => {
       if (currentProjectId && uid) {
         queryClient.invalidateQueries({
@@ -55,7 +55,7 @@ export const useUpdateTask = () => {
   const { currentProjectId } = useProjectStore();
   const { uid } = useAuth();
   return useMutation({
-    mutationFn: ({ id, data }: { id: string; data: TaskUpdateRequest }) =>
+    mutationFn: ({ id, data }: { id: string; data: CreateTaskDto }) =>
       taskApi.updateTask(id, data),
     onSuccess: (response, variables) => {
       queryClient.invalidateQueries({

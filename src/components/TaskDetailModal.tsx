@@ -25,7 +25,6 @@ import {
   IconEdit,
   IconTrash,
   IconSend,
-  IconTag,
   IconClock,
   IconUser,
   IconX,
@@ -37,13 +36,7 @@ import {
 } from "@tabler/icons-react";
 import dayjs from "dayjs";
 import relativeTime from "dayjs/plugin/relativeTime";
-import {
-  Task,
-  Priority,
-  UpdateTaskDto,
-  TaskUpdateRequest,
-  Comment,
-} from "@/types/api";
+import { Task, Comment, Event } from "@/types/api";
 import { useGetAvailableUsers } from "@/hooks/user";
 import { useGetStatuses } from "@/hooks/status";
 import { useGetEventByTaskId } from "@/hooks/event";
@@ -54,9 +47,8 @@ import {
   useGetCommentByTaskId,
   useUpdateComment,
 } from "@/hooks/comment";
-import { updateComment } from "@/services/commentApi";
 import { useDeleteTask, useTask, useUpdateTask } from "@/hooks/task";
-import { queryClient } from "@/services/queryClient";
+import { presignUrl, uploadFile } from "@/services/upload";
 dayjs.extend(relativeTime);
 interface FileAttachment {
   id: string;
@@ -81,7 +73,7 @@ export default function TaskDetailModal({
     (Task & { assigneeIds: string[] }) | null
   >(null);
   const [newComment, setNewComment] = useState("");
-  const [commentFiles, setCommentFiles] = useState<File[]>([]);
+  const [commentFile, setCommentFile] = useState<File | null>(null);
   const [activeTab, setActiveTab] = useState<"comments" | "history">(
     "comments"
   );
@@ -89,6 +81,7 @@ export default function TaskDetailModal({
   const [editedCommentText, setEditedCommentText] = useState("");
   const [isUpdating, setIsUpdating] = useState(false);
   const [isAddingComment, setIsAddingComment] = useState(false);
+  const [isUploadingFile, setIsUploadingFile] = useState(false);
   const { data: availableUsers } = useGetAvailableUsers();
   const { data: events } = useGetEventByTaskId(taskId);
   const { data: comments } = useGetCommentByTaskId(taskId);
@@ -124,23 +117,16 @@ export default function TaskDetailModal({
     setIsEditing(true);
   };
   const handleSaveEdit = async () => {
+    console.log("change");
     if (editedTask) {
       setIsUpdating(true);
       try {
-        const updatedTask: UpdateTaskDto = {
-          title: editedTask.name,
-          description: editedTask.description,
-          priority: editedTask.priority as Priority,
-          statusId: editedTask.statusId,
-          dueDate: editedTask.deadline
-            ? new Date(editedTask.deadline)
-            : undefined,
-          // Note: assigneeIds and actualTime might need separate API calls
-        };
-
         await updateTask({
           id: taskId,
-          data: updatedTask,
+          data: {
+            ...omit(editedTask, ["assigneeIds", "ownerId", "owner", "status"]),
+            assignees: editedTask.assigneeIds.map((id) => id),
+          },
         });
 
         setIsEditing(false);
@@ -157,18 +143,40 @@ export default function TaskDetailModal({
     setEditedTask(null);
   };
   const handleAddComment = async () => {
-    if (!newComment.trim() && commentFiles.length === 0) return;
+    if (!newComment.trim() && !commentFile) return;
 
     setIsAddingComment(true);
     try {
-      // For now, we'll just add the text comment
-      // File attachments would need separate upload handling
-      await addComment(newComment);
+      let fileUrl = null;
+
+      // Upload file first if exists
+      if (commentFile) {
+        setIsUploadingFile(true);
+
+        // Generate unique filename
+        const timestamp = Date.now();
+        const extension = commentFile.name.split(".").pop();
+        const filename = `comments/${taskId}_${timestamp}.${extension}`;
+
+        // Get presigned URL and upload file
+        const { url: presignedUrl, publicUrl } = await presignUrl(filename);
+        await uploadFile(commentFile, presignedUrl);
+
+        fileUrl = publicUrl;
+        setIsUploadingFile(false);
+      }
+
+      // Add comment with file URL
+      await addComment({
+        content: newComment,
+        file: fileUrl || undefined,
+      });
 
       setNewComment("");
-      setCommentFiles([]);
+      setCommentFile(null);
     } catch (error) {
       console.error("Failed to add comment:", error);
+      setIsUploadingFile(false);
     } finally {
       setIsAddingComment(false);
     }
@@ -207,13 +215,6 @@ export default function TaskDetailModal({
       onClose();
     } catch (error) {
       console.error("Failed to delete task:", error);
-    }
-  };
-  const handleRemoveTag = (tagToRemove: string) => {
-    if (editedTask) {
-      setEditedTask({
-        ...editedTask,
-      });
     }
   };
   const formatDate = (dateString: string) => {
@@ -439,7 +440,7 @@ export default function TaskDetailModal({
                   </Badge>
                 )}
               </Group>
-              {}
+
               {task.assignees && task.assignees.length > 0 && (
                 <Group gap="xs" mb="md">
                   <IconUser size={16} />
@@ -478,7 +479,7 @@ export default function TaskDetailModal({
           )}
         </div>
         <Divider />
-        {}
+
         <Group gap="sm">
           <Button
             variant={activeTab === "comments" ? "filled" : "subtle"}
@@ -495,11 +496,10 @@ export default function TaskDetailModal({
             History ({events?.length || 0})
           </Button>
         </Group>
-        {}
+
         <ScrollArea.Autosize mah={300}>
           {activeTab === "comments" && (
             <Stack gap="md">
-              {}
               <Paper p="md" withBorder>
                 <Stack gap="sm">
                   <Textarea
@@ -509,20 +509,18 @@ export default function TaskDetailModal({
                     rows={3}
                   />
                   <FileInput
-                    placeholder="Attach files..."
-                    value={commentFiles}
-                    onChange={setCommentFiles}
-                    multiple
+                    placeholder="Attach a file..."
+                    value={commentFile}
+                    onChange={setCommentFile}
                     leftSection={<IconUpload size={16} />}
                     clearable
                   />
-                  {commentFiles.length > 0 && (
+                  {commentFile && (
                     <Group gap="xs">
-                      {commentFiles.map((file, idx) => (
-                        <Badge key={idx} variant="light" color="gray">
-                          {file.name} ({(file.size / 1024).toFixed(1)}KB)
-                        </Badge>
-                      ))}
+                      <Badge variant="light" color="gray">
+                        {commentFile.name} (
+                        {(commentFile.size / 1024).toFixed(1)}KB)
+                      </Badge>
                     </Group>
                   )}
                   <Group justify="end">
@@ -530,24 +528,25 @@ export default function TaskDetailModal({
                       leftSection={<IconSend size={16} />}
                       onClick={handleAddComment}
                       disabled={
-                        (!newComment.trim() && commentFiles.length === 0) ||
-                        isAddingComment
+                        (!newComment.trim() && !commentFile) ||
+                        isAddingComment ||
+                        isUploadingFile
                       }
-                      loading={isAddingComment}
+                      loading={isAddingComment || isUploadingFile}
                       size="sm"
                     >
-                      Add Comment
+                      {isUploadingFile ? "Uploading..." : "Add Comment"}
                     </Button>
                   </Group>
                 </Stack>
               </Paper>
-              {}
+
               {comments && comments.length > 0 ? (
                 <Stack gap="sm">
                   {comments.map((comment: Comment) => (
                     <Paper key={comment.id} p="md" withBorder>
                       <Group gap="sm" align="flex-start">
-                        <Avatar size="sm" radius="xl">
+                        <Avatar size="sm" radius="xl" src={comment.user.avatar}>
                           {(comment.user.name.charAt(0) || "R").toUpperCase()}
                         </Avatar>
                         <div style={{ flex: 1 }}>
@@ -622,30 +621,33 @@ export default function TaskDetailModal({
                               </Text>
                             )
                           )}
-                          {/* {comment.file &&
-                            (<Card key={file.id} p="xs" withBorder>
-                                    <Group gap="xs">
-                                      <IconFile size={16} />
-                                      <div style={{ flex: 1 }}>
-                                        <Text size="xs" fw={500}>
-                                          {file.name}
-                                        </Text>
-                                        <Text size="xs" c="dimmed">
-                                          {(file.size / 1024).toFixed(1)}KB •{" "}
-                                          {file.type}
-                                        </Text>
-                                      </div>
-                                      <ActionIcon
-                                        size="sm"
-                                        variant="subtle"
-                                        component="a"
-                                        href={file.url}
-                                        download={file.name}
-                                      >
-                                        <IconDownload size={14} />
-                                      </ActionIcon>
-                                    </Group>
-                                  </Card>)} */}
+                          {/* File attachment display */}
+                          {comment.file && (
+                            <Card p="xs" withBorder mt="xs">
+                              <Group gap="xs">
+                                <IconFile size={16} />
+                                <div style={{ flex: 1 }}>
+                                  <Text size="xs" fw={500}>
+                                    {comment.file.split("/").pop() ||
+                                      "Attached file"}
+                                  </Text>
+                                  <Text size="xs" c="dimmed">
+                                    Click to download
+                                  </Text>
+                                </div>
+                                <ActionIcon
+                                  size="sm"
+                                  variant="subtle"
+                                  component="a"
+                                  href={comment.file}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                >
+                                  <IconDownload size={14} />
+                                </ActionIcon>
+                              </Group>
+                            </Card>
+                          )}
                         </div>
                       </Group>
                     </Paper>
@@ -661,29 +663,29 @@ export default function TaskDetailModal({
           {activeTab === "history" && (
             <Stack gap="sm">
               {events && events.length > 0 ? (
-                events.map((entry: any) => (
+                events.map((entry: Event) => (
                   <Paper key={entry.id} p="md" withBorder>
                     <Group gap="sm" align="flex-start">
-                      <Avatar size="sm" radius="xl">
-                        {entry.author[0]}
+                      <Avatar size="sm" radius="xl" src={entry.user?.avatar}>
+                        {entry.user?.name[0]}
                       </Avatar>
                       <div style={{ flex: 1 }}>
                         <Group gap="xs" mb="xs">
                           <Text size="sm" fw={500}>
-                            {entry.author}
+                            {entry.user?.name}
                           </Text>
                           <Text size="sm" c="blue">
-                            {entry.action}
+                            {entry.type}
                           </Text>
                           <Text size="xs" c="dimmed">
                             {formatDate(entry.createdAt)}
                           </Text>
                         </Group>
-                        {entry.details && (
+                        {/* {entry.details && (
                           <Text size="xs" c="dimmed">
                             {entry.details}
                           </Text>
-                        )}
+                        )} */}
                       </div>
                     </Group>
                   </Paper>

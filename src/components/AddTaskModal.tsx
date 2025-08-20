@@ -14,11 +14,11 @@ import {
 import { DateTimePicker } from "@mantine/dates";
 import dayjs from "dayjs";
 import { useGetAvailableUsers, useGetMe } from "@/hooks/user";
-import { Priority, TaskCreateRequest } from "@/types/api";
+import { CreateTaskDto, Priority } from "@/types/api";
 interface AddTaskModalProps {
   opened: boolean;
   onClose: () => void;
-  onAddTask: (task: TaskCreateRequest) => void;
+  onAddTask: (task: CreateTaskDto) => void;
 }
 export default function AddTaskModal({
   opened,
@@ -44,6 +44,7 @@ export default function AddTaskModal({
       assignees,
       deadline: deadline ? dayjs(deadline).toISOString() : undefined,
       ownerId: me?.id || "",
+      statusId: "",
     });
 
     setTitle("");

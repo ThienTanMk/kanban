@@ -21,7 +21,8 @@ export function useGetCommentByTaskId(taskId: string) {
 export function useAddComment(taskId: string) {
   const { uid } = useAuth();
   return useMutation({
-    mutationFn: (content: string) => addComment(taskId, content),
+    mutationFn: ({ content, file }: { content: string; file?: string }) =>
+      addComment(taskId, content, file),
     onSuccess: () => {
       queryClient.invalidateQueries({
         queryKey: ["comments", uid, taskId],
@@ -52,8 +53,15 @@ export function useDeleteComment(taskId: string) {
 export function useUpdateComment() {
   const { uid } = useAuth();
   return useMutation({
-    mutationFn: ({ id, content }: { id: string; content: string }) =>
-      updateComment(id, content),
+    mutationFn: ({
+      id,
+      content,
+      file,
+    }: {
+      id: string;
+      content: string;
+      file?: string;
+    }) => updateComment(id, content, file),
     onSuccess: () => {
       queryClient.invalidateQueries({
         queryKey: ["comments", uid],

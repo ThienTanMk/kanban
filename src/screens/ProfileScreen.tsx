@@ -138,10 +138,8 @@ export default function ProfileScreen() {
       const extension = file.name.split(".").pop();
       const filename = `avatars/${user?.id}_${timestamp}.${extension}`;
 
-      // Get presigned URL
       const { url: presignedUrl, publicUrl } = await presignUrl(filename);
 
-      // Upload file to the presigned URL
       await uploadFile(file, presignedUrl);
 
       return publicUrl;

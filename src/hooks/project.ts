@@ -74,12 +74,12 @@ export const useDeleteProject = () => {
   });
 };
 
-export const useGetTeamMemberByProject = () => {
+export const useGetRoleOnProject = () => {
   const { uid } = useAuth();
   const { currentProjectId } = useProjectStore();
   return useQuery({
     queryKey: projectKeys.detail(currentProjectId as string),
-    queryFn: () => projectApi.getTeamMembers(currentProjectId as string),
+    queryFn: () => projectApi.getRoleOnProject(currentProjectId as string),
     enabled: !!currentProjectId && !!uid,
     staleTime: 5 * 60 * 1000,
   });

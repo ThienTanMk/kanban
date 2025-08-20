@@ -20,6 +20,7 @@ export interface Project {
   endDate: Date | null;
   ownerId: string;
   archived?: boolean;
+  role?: ProjectRole;
 }
 
 export interface UsersOnProject {
@@ -58,7 +59,7 @@ export interface Comment {
   content: string;
   taskId: string;
   userId: string;
-  file: any;
+  file: string | null;
   createdAt: string;
   updatedAt: string;
   user: User;
@@ -66,12 +67,14 @@ export interface Comment {
 
 export interface Event {
   id: string;
-  type: EventType;
-  description: string | null;
-  createdAt: Date;
-  projectId: string;
+  type: string;
+  payload: string;
   userId: string;
-  taskId: string | null;
+  createdAt: string;
+  updatedAt: string;
+  taskId: string;
+  task?: Task;
+  user?: User;
 }
 
 export enum InviteStatus {
@@ -164,27 +167,15 @@ export interface UpdateProjectDto {
   archived?: boolean;
 }
 
-export interface CreateTaskDto {
-  title: string;
-  description?: string;
-  priority: Priority;
-  dueDate?: Date;
-  projectId: string;
-  statusId: string;
-  assigneeId?: string;
-  tagIds?: string[];
+export interface CreateTaskDto
+  extends Omit<
+    Task,
+    "id" | "createdAt" | "updatedAt" | "owner" | "status" | "assignees"
+  > {
+  assignees: string[];
 }
 
-export interface UpdateTaskDto {
-  title?: string;
-  description?: string;
-  priority?: Priority;
-  dueDate?: Date;
-  statusId?: string;
-  assigneeId?: string;
-  tagIds?: string[];
-  archived?: boolean;
-}
+export interface UpdateTaskDto extends Partial<CreateTaskDto> {}
 
 export interface UpdateStatusDto {
   statusId: string;
@@ -331,20 +322,6 @@ export type ProjectCreateResponse = ApiResponse<Project>;
 export type ProjectUpdateResponse = ApiResponse<Project>;
 export type ProjectDeleteResponse = ApiResponse<{ id: string }>;
 
-export interface TaskCreateRequest {
-  name: string;
-  description?: string;
-  priority: Priority;
-  dueDate?: Date;
-  statusId?: string;
-  assignees?: string[];
-  deadline?: string;
-  ownerId?: string;
-  actualTime?: number;
-}
-
-export interface TaskUpdateRequest extends Partial<TaskCreateRequest> {}
-
 export type TaskCreateResponse = ApiResponse<Task>;
 export type TaskUpdateResponse = ApiResponse<Task>;
 export type TaskDeleteResponse = ApiResponse<{ id: string }>;
@@ -421,18 +398,18 @@ export type MarkNotificationReadResponse = ApiResponse<Notification>;
 export interface Task {
   id: string;
   name: string;
-  description: string;
+  description?: string;
   statusId: string;
-  deadline: string;
-  actualTime: any;
-  createdAt: string;
-  updatedAt: string;
-  priority: string;
-  ownerId: string;
-  tagOnTask: any[];
-  status: Status;
-  assignees: Assignee[];
-  owner: Owner;
+  deadline?: string;
+  actualTime?: any;
+  createdAt?: string;
+  updatedAt?: string;
+  priority?: string;
+  ownerId?: string;
+  tagOnTask?: any[];
+  status?: Status;
+  assignees?: Assignee[];
+  owner?: Owner;
 }
 
 export interface Status {

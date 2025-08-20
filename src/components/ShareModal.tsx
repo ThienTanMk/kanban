@@ -23,7 +23,6 @@ import {
 } from "@tabler/icons-react";
 import { notifications } from "@mantine/notifications";
 import dayjs from "dayjs";
-import { useGetTeamMemberByProject } from "@/hooks/project";
 import { useGetInvites, useAddInvite, useDeleteInvite } from "@/hooks/invite";
 import { useProjectStore } from "@/stores/projectStore";
 import { ProjectRole, InviteStatus } from "@/types/api";
@@ -40,8 +39,6 @@ export default function ShareModal({ opened, onClose }: ShareModalProps) {
   const [hasInviteSent, setHasInviteSent] = useState(false);
 
   const { currentProjectId } = useProjectStore();
-  const { data: teamMembers, isLoading: membersLoading } =
-    useGetTeamMemberByProject();
   const { data: invites, isLoading: invitesLoading } = useGetInvites();
   const { mutateAsync: addInvite } = useAddInvite();
 
@@ -190,7 +187,7 @@ export default function ShareModal({ opened, onClose }: ShareModalProps) {
           </div>
         )}
 
-        <div>
+        {/* <div>
           <Text size="sm" fw={500} mb="xs">
             Team Members ({teamMembers?.length || 0})
           </Text>
@@ -250,7 +247,7 @@ export default function ShareModal({ opened, onClose }: ShareModalProps) {
               </Text>
             )}
           </Stack>
-        </div>
+        </div> */}
 
         <div>
           <Text size="sm" fw={500} mb="xs">
@@ -304,14 +301,16 @@ export default function ShareModal({ opened, onClose }: ShareModalProps) {
                       >
                         {invite.status}
                       </Badge>
-                      <ActionIcon
-                        variant="subtle"
-                        color="red"
-                        size="sm"
-                        onClick={() => handleRemoveInvite(invite.id)}
-                      >
-                        <IconTrash size={14} />
-                      </ActionIcon>
+                      {invite.status === InviteStatus.PENDING && (
+                        <ActionIcon
+                          variant="subtle"
+                          color="red"
+                          size="sm"
+                          onClick={() => handleRemoveInvite(invite.id)}
+                        >
+                          <IconTrash size={14} />
+                        </ActionIcon>
+                      )}
                     </Group>
                   </Group>
                 </Paper>

@@ -24,8 +24,12 @@ import {
   IconChevronRight,
 } from "@tabler/icons-react";
 import { useProjectStore } from "../stores/projectStore";
-import { useUserProjects, useDeleteProject } from "../hooks/project";
-import { Project } from "../types/api";
+import {
+  useUserProjects,
+  useDeleteProject,
+  useGetRoleOnProject,
+} from "../hooks/project";
+import { Project, ProjectRole } from "../types/api";
 import dayjs from "dayjs";
 interface ProjectSidebarProps {
   onCreateProject: () => void;
@@ -42,6 +46,7 @@ const ProjectSidebar: React.FC<ProjectSidebarProps> = ({
   const { currentProjectId, setCurrentProjectId } = useProjectStore();
   const { refetch, data: projects, isLoading, error } = useUserProjects();
   const deleteProjectMutation = useDeleteProject();
+  const { data: roleData } = useGetRoleOnProject(); // role data on selected project
   const handleSelectProject = (project: Project) => {
     setCurrentProjectId(project.id);
   };
@@ -65,12 +70,43 @@ const ProjectSidebar: React.FC<ProjectSidebarProps> = ({
       },
     });
   };
+
+  const getRoleBadgeProps = (role: ProjectRole | undefined) => {
+    switch (role) {
+      case ProjectRole.OWNER:
+        return { color: "blue", label: "Owner" };
+      case ProjectRole.ADMIN:
+        return { color: "green", label: "Admin" };
+      case ProjectRole.MEMBER:
+        return { color: "orange", label: "Member" };
+      case ProjectRole.VIEWER:
+        return { color: "gray", label: "Viewer" };
+      default:
+        return { color: "gray", label: "Member" };
+    }
+  };
   const ProjectItem: React.FC<{ project: Project }> = ({ project }) => {
     const isSelected = currentProjectId === project.id;
     const projectInitial = project.name.charAt(0).toUpperCase();
+    const roleBadge =
+      isSelected && roleData ? getRoleBadgeProps(roleData) : null;
+
     if (collapsed) {
       return (
-        <Tooltip label={project.name} position="right" withArrow>
+        <Tooltip
+          label={
+            <div>
+              <div>{project.name}</div>
+              {roleBadge && (
+                <div style={{ fontSize: "0.75rem", opacity: 0.8 }}>
+                  Role: {roleBadge.label}
+                </div>
+              )}
+            </div>
+          }
+          position="right"
+          withArrow
+        >
           <UnstyledButton
             p="sm"
             style={{
@@ -83,7 +119,9 @@ const ProjectSidebar: React.FC<ProjectSidebarProps> = ({
                 : "1px solid transparent",
               width: "100%",
               display: "flex",
-              justifyContent: "center",
+              flexDirection: "column",
+              alignItems: "center",
+              gap: "4px",
             }}
             onClick={() => handleSelectProject(project)}
           >
@@ -95,6 +133,16 @@ const ProjectSidebar: React.FC<ProjectSidebarProps> = ({
             >
               {projectInitial}
             </Avatar>
+            {roleBadge && (
+              <Badge
+                size="xs"
+                color={roleBadge.color}
+                variant="dot"
+                style={{ fontSize: "0.6rem" }}
+              >
+                {roleBadge.label.charAt(0)}
+              </Badge>
+            )}
           </UnstyledButton>
         </Tooltip>
       );
@@ -137,9 +185,21 @@ const ProjectSidebar: React.FC<ProjectSidebarProps> = ({
               {projectInitial}
             </Avatar>
             <Box style={{ flex: 1, minWidth: 0 }}>
-              <Text size="sm" fw={isSelected ? 600 : 400} truncate>
-                {project.name}
-              </Text>
+              <Group justify="space-between" align="center" wrap="nowrap">
+                <Text size="sm" fw={isSelected ? 600 : 400} truncate>
+                  {project.name}
+                </Text>
+                {roleBadge && (
+                  <Badge
+                    size="xs"
+                    color={roleBadge.color}
+                    variant="light"
+                    style={{ flexShrink: 0 }}
+                  >
+                    {roleBadge.label}
+                  </Badge>
+                )}
+              </Group>
               {project.description && (
                 <Text size="xs" c="dimmed" truncate>
                   {project.description}

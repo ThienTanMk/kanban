@@ -98,7 +98,7 @@ export default function TaskCard({ card, index, onViewTask }: TaskCardProps) {
               </Badge>
             </Group>
           )}
-          {}
+
           <Group justify="space-between" align="flex-end" mt="xs">
             <Group gap="xs">
               {card.priority && (
@@ -116,14 +116,13 @@ export default function TaskCard({ card, index, onViewTask }: TaskCardProps) {
                 </Badge>
               )}
             </Group>
-            {}
+
             {card.assignees && card.assignees.length > 0 && (
               <Avatar.Group spacing="xs">
                 {card.assignees.slice(0, 3).map((assignee, idx) => (
                   <Tooltip key={idx} label={assignee.user.name} position="top">
-                    <Avatar size="xs" radius="xl">
-                      {assignee.user.avatar ||
-                        (assignee.user.name.charAt(0) || "R").toUpperCase()}
+                    <Avatar size="xs" radius="xl" src={assignee.user.avatar}>
+                      {(assignee.user.name.charAt(0) || "R").toUpperCase()}
                     </Avatar>
                   </Tooltip>
                 ))}

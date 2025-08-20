@@ -38,7 +38,7 @@ import {
   useUpdateStatus,
   useDeleteStatus,
 } from "@/hooks/status";
-import { Task, TaskCreateRequest } from "@/types/api";
+import { Task, CreateTaskDto } from "@/types/api";
 import { unionBy } from "lodash";
 interface Column {
   id: string;
@@ -129,7 +129,7 @@ export default function KanbanBoard() {
       console.error("Error handling drag end:", error);
     }
   };
-  const handleAddTask = async (data: TaskCreateRequest) => {
+  const handleAddTask = async (data: CreateTaskDto) => {
     try {
       await createTask({
         ...data,
@@ -314,8 +314,10 @@ export default function KanbanBoard() {
             placeholder="Priority"
             leftSection={<IconFilter size={16} />}
             data={priorities.map((priority) => ({
-              value: priority,
-              label: priority.charAt(0).toUpperCase() + priority.slice(1),
+              value: priority as string,
+              label: priority
+                ? priority.charAt(0).toUpperCase() + priority.slice(1)
+                : "",
             }))}
             value={selectedPriority}
             onChange={setSelectedPriority}

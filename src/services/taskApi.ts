@@ -1,4 +1,4 @@
-import { Task, TaskCreateRequest, TaskUpdateRequest } from "../types/api";
+import { CreateTaskDto, Task, UpdateTaskDto } from "../types/api";
 import { instance } from "./axios";
 
 export const taskApi = {
@@ -16,11 +16,11 @@ export const taskApi = {
     const response = await instance.get(`/tasks/${id}`);
     return response.data;
   },
-  createTask: async (data: TaskCreateRequest): Promise<Task> => {
+  createTask: async (data: CreateTaskDto): Promise<Task> => {
     const response = await instance.post("/tasks", data);
     return response.data;
   },
-  updateTask: async (id: string, data: TaskUpdateRequest): Promise<Task> => {
+  updateTask: async (id: string, data: UpdateTaskDto): Promise<Task> => {
     const response = await instance.put(`/tasks/${id}`, data);
     return response.data;
   },
