@@ -40,6 +40,7 @@ import {
 } from "@/hooks/status";
 import { Task, CreateTaskDto } from "@/types/api";
 import { unionBy } from "lodash";
+import { usePermissions } from "@/hooks/usePermissions";
 interface Column {
   id: string;
   title: string;
@@ -47,6 +48,7 @@ interface Column {
 }
 export default function KanbanBoard() {
   const { currentProjectId } = useProjectStore();
+  const { canEditTasks, canDragTasks } = usePermissions();
 
   const { data: statuses } = useGetStatuses();
   const { mutateAsync: addStatus } = useAddStatus();
@@ -112,6 +114,9 @@ export default function KanbanBoard() {
     (o) => o.userId
   );
   const handleDragEnd = async (result: DropResult) => {
+    // Không cho phép drag & drop nếu là VIEWER
+    if (!canDragTasks) return;
+
     const { destination, source, draggableId } = result;
     if (!destination) return;
     if (
@@ -294,12 +299,14 @@ export default function KanbanBoard() {
               { label: "Table View", value: "table" },
             ]}
           />
-          <Button
-            leftSection={<IconPlus size={16} />}
-            onClick={() => setAddTaskModalOpened(true)}
-          >
-            Add Task
-          </Button>
+          {canEditTasks && (
+            <Button
+              leftSection={<IconPlus size={16} />}
+              onClick={() => setAddTaskModalOpened(true)}
+            >
+              Add Task
+            </Button>
+          )}
         </Group>
 
         <Group gap="sm">
@@ -385,6 +392,8 @@ export default function KanbanBoard() {
           setIsAddingColumn={setIsAddingColumn}
           newColumnTitle={newColumnTitle}
           setNewColumnTitle={setNewColumnTitle}
+          canEditTasks={canEditTasks}
+          canDragTasks={canDragTasks}
         />
       ) : (
         <KanbanTableView

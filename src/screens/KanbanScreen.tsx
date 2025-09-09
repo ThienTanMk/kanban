@@ -7,14 +7,17 @@ import KanbanBoardNew from "../components/KanbanBoardNew";
 import ShareModal from "../components/ShareModal";
 import NotificationDropdown from "../components/NotificationDropdown";
 import AppLayout from "../components/AppLayout";
+import ViewerAlert from "../components/ViewerAlert";
 import { useProjectStore } from "../stores/projectStore";
 import { useProject } from "../hooks/project";
 import { useUserStore } from "@/stores/userStore";
+import { usePermissions } from "@/hooks/usePermissions";
 export default function KanbanScreen() {
   const router = useRouter();
   const [shareModalOpened, setShareModalOpened] = useState(false);
   const { currentProjectId } = useProjectStore();
   const {} = useProject(currentProjectId);
+  const { canShareProject } = usePermissions();
   const handleNavigateToProfile = () => {
     router.push("/profile");
   };
@@ -55,13 +58,15 @@ export default function KanbanScreen() {
                 )}
               </div>
               <Group gap="sm">
-                <Button
-                  variant="outline"
-                  leftSection={<IconShare size={16} />}
-                  onClick={() => setShareModalOpened(true)}
-                >
-                  Share Project
-                </Button>
+                {canShareProject && (
+                  <Button
+                    variant="outline"
+                    leftSection={<IconShare size={16} />}
+                    onClick={() => setShareModalOpened(true)}
+                  >
+                    Share Project
+                  </Button>
+                )}
                 <NotificationDropdown />
               </Group>
             </Group>
@@ -92,7 +97,12 @@ export default function KanbanScreen() {
           </Alert>
         )}
 
-        {currentProjectId && currentProject && <KanbanBoardNew />}
+        {currentProjectId && currentProject && (
+          <>
+            <ViewerAlert />
+            <KanbanBoardNew />
+          </>
+        )}
 
         <ShareModal
           opened={shareModalOpened}

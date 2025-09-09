@@ -18,8 +18,14 @@ interface TaskCardProps {
   card: Task;
   index: number;
   onViewTask: (task: Task) => void;
+  canDragTasks?: boolean;
 }
-export default function TaskCard({ card, index, onViewTask }: TaskCardProps) {
+export default function TaskCard({
+  card,
+  index,
+  onViewTask,
+  canDragTasks = true,
+}: TaskCardProps) {
   const getPriorityColor = (priority?: string) => {
     switch (priority) {
       case "HIGH":
@@ -59,7 +65,12 @@ export default function TaskCard({ card, index, onViewTask }: TaskCardProps) {
     }
   };
   return (
-    <Draggable key={card.id} draggableId={card.id} index={index}>
+    <Draggable
+      key={card.id}
+      draggableId={card.id}
+      index={index}
+      isDragDisabled={!canDragTasks}
+    >
       {(provided, snapshot) => (
         <Card
           ref={provided.innerRef}

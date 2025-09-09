@@ -34,6 +34,8 @@ interface KanbanColumnProps {
   onDeleteColumn?: () => void;
   onRenameColumn?: (newTitle: string) => void;
   dragHandleProps?: DraggableProvidedDragHandleProps | null;
+  canEditTasks?: boolean;
+  canDragTasks?: boolean;
 }
 export default function KanbanColumn({
   column,
@@ -42,6 +44,8 @@ export default function KanbanColumn({
   onDeleteColumn,
   onRenameColumn,
   dragHandleProps,
+  canEditTasks = true,
+  canDragTasks = true,
 }: KanbanColumnProps) {
   const [isRenameModalOpen, setIsRenameModalOpen] = useState(false);
   const [newTitle, setNewTitle] = useState(column.title);
@@ -83,32 +87,34 @@ export default function KanbanColumn({
             <Badge variant="outline" size="sm">
               {column.cards.length}
             </Badge>
-            <Menu shadow="md" width={150}>
-              <Menu.Target>
-                <ActionIcon variant="subtle" color="gray" size="sm">
-                  <IconDots size={16} />
-                </ActionIcon>
-              </Menu.Target>
-              <Menu.Dropdown>
-                <Menu.Item
-                  leftSection={<IconEdit size={14} />}
-                  onClick={() => {
-                    setNewTitle(column.title);
-                    setIsRenameModalOpen(true);
-                  }}
-                >
-                  Rename
-                </Menu.Item>
-                <Menu.Item
-                  leftSection={<IconTrash size={14} />}
-                  color="red"
-                  onClick={handleDelete}
-                  disabled={column.cards.length > 0}
-                >
-                  Delete
-                </Menu.Item>
-              </Menu.Dropdown>
-            </Menu>
+            {canEditTasks && (
+              <Menu shadow="md" width={150}>
+                <Menu.Target>
+                  <ActionIcon variant="subtle" color="gray" size="sm">
+                    <IconDots size={16} />
+                  </ActionIcon>
+                </Menu.Target>
+                <Menu.Dropdown>
+                  <Menu.Item
+                    leftSection={<IconEdit size={14} />}
+                    onClick={() => {
+                      setNewTitle(column.title);
+                      setIsRenameModalOpen(true);
+                    }}
+                  >
+                    Rename
+                  </Menu.Item>
+                  <Menu.Item
+                    leftSection={<IconTrash size={14} />}
+                    color="red"
+                    onClick={handleDelete}
+                    disabled={column.cards.length > 0}
+                  >
+                    Delete
+                  </Menu.Item>
+                </Menu.Dropdown>
+              </Menu>
+            )}
           </Group>
         </Group>
         <Droppable droppableId={column.id}>
@@ -124,21 +130,24 @@ export default function KanbanColumn({
                   card={card}
                   index={idx}
                   onViewTask={onViewTask}
+                  canDragTasks={canDragTasks}
                 />
               ))}
               {provided.placeholder}
             </div>
           )}
         </Droppable>
-        <Button
-          variant="light"
-          leftSection={<IconPlus size={16} />}
-          fullWidth
-          mt="md"
-          onClick={onAddTask}
-        >
-          Add Task
-        </Button>
+        {canEditTasks && (
+          <Button
+            variant="light"
+            leftSection={<IconPlus size={16} />}
+            fullWidth
+            mt="md"
+            onClick={onAddTask}
+          >
+            Add Task
+          </Button>
+        )}
       </Paper>
 
       {/* Rename Modal */}

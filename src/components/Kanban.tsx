@@ -65,6 +65,8 @@ interface KanbanProps {
   setIsAddingColumn: Dispatch<SetStateAction<boolean>>;
   newColumnTitle: string;
   setNewColumnTitle: Dispatch<SetStateAction<string>>;
+  canEditTasks?: boolean;
+  canDragTasks?: boolean;
 }
 export default function Kanban({
   columns,
@@ -78,6 +80,8 @@ export default function Kanban({
   setIsAddingColumn,
   newColumnTitle,
   setNewColumnTitle,
+  canEditTasks = true,
+  canDragTasks = true,
 }: KanbanProps) {
   const handleAddColumnSubmit = () => {
     if (newColumnTitle.trim()) {
@@ -104,7 +108,12 @@ export default function Kanban({
             className="py-4 flex gap-4 overflow-x-auto min-h-[70vh]"
           >
             {columns.map((column, index) => (
-              <Draggable key={column.id} draggableId={column.id} index={index}>
+              <Draggable
+                key={column.id}
+                draggableId={column.id}
+                index={index}
+                isDragDisabled={!canDragTasks}
+              >
                 {(provided, snapshot) => (
                   <div
                     ref={provided.innerRef}
@@ -122,6 +131,8 @@ export default function Kanban({
                         onRenameColumn(column.id, newTitle)
                       }
                       dragHandleProps={provided.dragHandleProps}
+                      canEditTasks={canEditTasks}
+                      canDragTasks={canDragTasks}
                     />
                   </div>
                 )}
@@ -130,22 +141,21 @@ export default function Kanban({
             {provided.placeholder}
             <div className="min-w-[280px] flex-shrink-0">
               {isAddingColumn ? (
-                <Paper p="sm" className="bg-gray-100 rounded-lg">
+                <Paper p="md" shadow="sm" style={{ minWidth: "280px" }}>
                   <TextInput
+                    placeholder="Enter list title..."
                     value={newColumnTitle}
                     onChange={(e) => setNewColumnTitle(e.target.value)}
-                    placeholder="Enter list title..."
                     onKeyDown={handleKeyPress}
-                    autoFocus
-                    className="mb-2"
+                    data-autofocus
                   />
-                  <div className="flex gap-2">
+                  <div className="flex gap-2 mt-2">
                     <Button
                       size="xs"
                       onClick={handleAddColumnSubmit}
-                      disabled={!newColumnTitle.trim()}
+                      leftSection={<IconCheck size={14} />}
                     >
-                      <IconCheck size={14} />
+                      Add list
                     </Button>
                     <Button
                       size="xs"
@@ -154,22 +164,25 @@ export default function Kanban({
                         setIsAddingColumn(false);
                         setNewColumnTitle("");
                       }}
+                      leftSection={<IconX size={14} />}
                     >
-                      <IconX size={14} />
+                      Cancel
                     </Button>
                   </div>
                 </Paper>
               ) : (
-                <Button
-                  variant="light"
-                  color="gray"
-                  size="md"
-                  className="w-full h-12 justify-start"
-                  onClick={() => setIsAddingColumn(true)}
-                  leftSection={<IconPlus size={16} />}
-                >
-                  Add a list
-                </Button>
+                canEditTasks && (
+                  <Button
+                    variant="light"
+                    color="gray"
+                    size="md"
+                    className="w-full h-12 justify-start"
+                    onClick={() => setIsAddingColumn(true)}
+                    leftSection={<IconPlus size={16} />}
+                  >
+                    Add a list
+                  </Button>
+                )
               )}
             </div>
           </div>
