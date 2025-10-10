@@ -11,8 +11,9 @@ import {
   Paper,
   ScrollArea,
   Button,
+  Drawer,
 } from "@mantine/core";
-import { IconBell, IconCheck, IconTrash } from "@tabler/icons-react";
+import { IconBell, IconCheck, IconMessageChatbot, IconTrash } from "@tabler/icons-react";
 import dayjs from "dayjs";
 import relativeTime from "dayjs/plugin/relativeTime";
 dayjs.extend(relativeTime);
@@ -27,6 +28,7 @@ interface Notification {
   author?: string;
 }
 export default function NotificationDropdown() {
+  const [chatOpened, setChatOpened] = useState(false);
   const [notifications, setNotifications] = useState<Notification[]>([
     {
       id: "1",
@@ -108,40 +110,75 @@ export default function NotificationDropdown() {
     }
   };
   return (
-    <Menu shadow="md" width={380} position="bottom-end">
-      <Menu.Target>
-        <ActionIcon variant="subtle" size="lg" pos="relative">
-          <IconBell size={20} />
-          {unreadCount > 0 && (
-            <Badge
-              size="xs"
-              circle
-              color="red"
-              pos="absolute"
-              top={4}
-              right={4}
-              style={{ zIndex: 1 }}
-            >
-              {unreadCount}
-            </Badge>
-          )}
-        </ActionIcon>
-      </Menu.Target>
+    <Menu shadow="md" width={450} position="bottom-end">
+      <Group>
+        <Menu.Target>
+          <ActionIcon variant="subtle" size="lg" pos="relative">
+            <IconBell size={40} />
+            {unreadCount > 0 && (
+              <Badge
+                size="xs"
+                circle
+                color="red"
+                pos="absolute"
+                top={4}
+                right={4}
+                style={{ zIndex: 1 }}
+              >
+                {unreadCount}
+              </Badge>
+            )}
+          </ActionIcon>
+        </Menu.Target>
+          <ActionIcon
+          variant="subtle"
+          size="lg"
+          onClick={() => setChatOpened(true)}
+        >
+          <IconMessageChatbot size={28} />
+          </ActionIcon>
+      </Group>
+
+      {/* chatbot tạm */}
+      <Drawer
+        opened={chatOpened}
+        onClose={() => setChatOpened(false)}
+        title="Chatbot"
+        position="right"
+        size="md"
+      >
+        <div style={{ height: "400px", display: "flex", flexDirection: "column" }}>
+          <div style={{ flex: 1, overflowY: "auto", border: "1px solid #ddd", padding: "8px" }}>
+            <p><b>Bot:</b> Xin chào! Tôi có thể giúp gì cho bạn?</p>
+          </div>
+          <input
+            type="text"
+            placeholder="Nhập tin nhắn..."
+            style={{
+              border: "1px solid #ccc",
+              borderRadius: "4px",
+              padding: "8px",
+              marginTop: "8px",
+            }}
+          />
+        </div>
+      </Drawer>
+
       <Menu.Dropdown>
         <Group justify="space-between" p="xs" pb="sm">
-          <Text fw={600}>Notifications</Text>
+          <Text size="xl" fw={600}>Notifications</Text>
           {unreadCount > 0 && (
             <Button
               variant="subtle"
-              size="xs"
+              size="md"
               onClick={markAllAsRead}
-              leftSection={<IconCheck size={12} />}
+              leftSection={<IconCheck size={15} />}
             >
               Mark all read
             </Button>
           )}
         </Group>
-        <ScrollArea.Autosize mah={400}>
+        <ScrollArea.Autosize mah={450}>
           {notifications.length === 0 ? (
             <Text ta="center" c="dimmed" p="xl">
               No notifications
@@ -163,17 +200,17 @@ export default function NotificationDropdown() {
                   }
                 >
                   <Group gap="sm" align="flex-start">
-                    <Avatar src={notification.avatar} size="sm" radius="xl">
+                    <Avatar src={notification.avatar} size="md" radius="xl">
                       {notification.author ? notification.author[0] : "S"}
                     </Avatar>
                     <div style={{ flex: 1, minWidth: 0 }}>
                       <Group justify="space-between" align="flex-start" mb={4}>
-                        <Text size="sm" fw={500} style={{ lineHeight: 1.2 }}>
+                        <Text size="md" fw={500} style={{ lineHeight: 1.2 }}>
                           {notification.title}
                         </Text>
                         <Group gap={4}>
                           <Badge
-                            size="xs"
+                            size="md"
                             color={getNotificationColor(notification.type)}
                             variant="dot"
                           />
@@ -186,11 +223,11 @@ export default function NotificationDropdown() {
                               deleteNotification(notification.id);
                             }}
                           >
-                            <IconTrash size={10} />
+                            <IconTrash size={20} />
                           </ActionIcon>
                         </Group>
                       </Group>
-                      <Text size="xs" c="dimmed" mb={4}>
+                      <Text size="sm" c="dimmed" mb={4}>
                         {notification.message}
                       </Text>
                       <Text size="xs" c="dimmed">

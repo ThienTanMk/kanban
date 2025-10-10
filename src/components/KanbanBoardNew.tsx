@@ -1,5 +1,5 @@
 "use client";
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import {
   Group,
   SegmentedControl,
@@ -11,6 +11,8 @@ import {
   Alert,
   Container,
   Text,
+  Modal,
+  Drawer,
 } from "@mantine/core";
 import { modals } from "@mantine/modals";
 import { DropResult } from "@hello-pangea/dnd";
@@ -20,10 +22,13 @@ import {
   IconFilter,
   IconX,
   IconAlertCircle,
+  IconUsersGroup,
 } from "@tabler/icons-react";
 import AddTaskModal from "./AddTaskModal";
 import TaskDetailModal from "./TaskDetailModal";
 import KanbanTableView from "./KanbanTableView";
+import KanbanCalendar from "./KanbanCalendar";
+import ProjectMember from "./ProjectMember";
 import Kanban from "./Kanban";
 import { useProjectStore } from "../stores/projectStore";
 import {
@@ -31,6 +36,7 @@ import {
   useCurrentProjectTasks,
   useTasksByProject,
   useUpdateTaskStatus,
+  useUpdateTask
 } from "../hooks/task";
 import {
   useAddStatus,
@@ -41,6 +47,7 @@ import {
 import { Task, CreateTaskDto } from "@/types/api";
 import { unionBy } from "lodash";
 import { usePermissions } from "@/hooks/usePermissions";
+import { useGetTeamMembers, useGetRoleOnProject } from "@/hooks/project";
 interface Column {
   id: string;
   title: string;
@@ -50,7 +57,7 @@ export default function KanbanBoard() {
   const { currentProjectId } = useProjectStore();
   const { canEditTasks, canDragTasks } = usePermissions();
 
-  const { data: statuses } = useGetStatuses();
+  const { data: statuses = [], refetch: refetchStatues } = useGetStatuses();
   const { mutateAsync: addStatus } = useAddStatus();
   const { mutateAsync: updateStatus } = useUpdateStatus();
   const { mutateAsync: deleteStatus } = useDeleteStatus();
@@ -63,7 +70,8 @@ export default function KanbanBoard() {
   } = useTasksByProject(currentProjectId as string);
 
   const { mutateAsync: createTask } = useCreateTask();
-  const [view, setView] = useState<"board" | "table">("board");
+  const { mutateAsync: updateTask } = useUpdateTask();
+  const [view, setView] = useState<"board" | "table" | "calendar">("board");
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedPriority, setSelectedPriority] = useState<string | null>(null);
   const [selectedAssignee, setSelectedAssignee] = useState<string | null>(null);
@@ -76,17 +84,37 @@ export default function KanbanBoard() {
   const [addTaskToColumnId, setAddTaskToColumnId] = useState<string | null>(
     null
   );
-  const { mutateAsync: updateTaskStatus } = useUpdateTaskStatus();
+  const { mutate: updateTaskStatus } = useUpdateTaskStatus();
+
+  const [showTeamModal, setShowTeamModal] = useState(false); // State cho modal hiển thị danh sách thành viên
+  const { data: teamMembers = [], isLoading: isLoadingTeam } = useGetTeamMembers(); // Lấy danh sách thành viên
+  const { data: roleOnProject } = useGetRoleOnProject(); // Lấy vai trò 
 
   const columns: Column[] = useMemo(() => {
-    return (
-      statuses?.map((status) => ({
+    if (statuses.length > 0) {
+      return statuses.map((status) => ({
         id: status.id,
         title: status.name,
         cards: tasks?.filter((task) => task.statusId === status.id) || [],
-      })) || []
-    );
+      }));
+    } else {
+      return [
+        { id: "todo", title: "To Do", cards: tasks?.filter((task) => task.statusId === "todo") || [] },
+        { id: "inprogress", title: "In Progress", cards: tasks?.filter((task) => task.statusId === "inprogress") || [] },
+        { id: "done", title: "Done", cards: tasks?.filter((task) => task.statusId === "done") || [] },
+      ];
+    }
   }, [statuses, tasks]);
+  
+  // const columns: Column[] = useMemo(() => {
+  //   return (
+  //     statuses?.map((status) => ({
+  //       id: status.id,
+  //       title: status.name,
+  //       cards: tasks?.filter((task) => task.statusId === status.id) || [],
+  //     })) || []
+  //   );
+  // }, [statuses, tasks]);
   const filteredColumns = useMemo(() => {
     return columns.map((column) => ({
       ...column,
@@ -113,7 +141,7 @@ export default function KanbanBoard() {
     allTasks.flatMap((task) => task.assignees || []),
     (o) => o.userId
   );
-  const handleDragEnd = async (result: DropResult) => {
+  const handleDragEnd = (result: DropResult) => {
     // Không cho phép drag & drop nếu là VIEWER
     if (!canDragTasks) return;
 
@@ -125,13 +153,32 @@ export default function KanbanBoard() {
     ) {
       return;
     }
-    try {
-      await updateTaskStatus({
-        id: draggableId,
-        statusId: destination.droppableId,
-      });
-    } catch (error) {
-      console.error("Error handling drag end:", error);
+    // try {
+    //   await updateTaskStatus({
+    //     id: draggableId,
+    //     statusId: destination.droppableId,
+    //   });
+    // } catch (error) {
+    //   console.error("Error handling drag end:", error);
+    // }
+    if (view === "board" || view === "table") {
+      try {
+        updateTaskStatus({
+          id: draggableId,
+          statusId: destination.droppableId,
+        });
+      } catch (error) {
+        console.error("Error handling drag end:", error);
+      }
+    } 
+    // Xử lý drag-drop cho calendar (cập nhật deadline)
+    else if (view === "calendar") {
+      const newDateKey = destination.droppableId.replace("calendar-day-", "");
+      try {
+        updateTask({ id: draggableId, data: { deadline: newDateKey } });
+      } catch (error) {
+        console.error("Error updating task deadline:", error);
+      }
     }
   };
   const handleAddTask = async (data: CreateTaskDto) => {
@@ -208,7 +255,7 @@ export default function KanbanBoard() {
       title: "Delete Column",
       children: (
         <Text size="sm">
-          Are you sure you want to delete "{column?.name}"? This action cannot
+          Are you sure you want to delete "{column?.name}" This action cannot
           be undone.
         </Text>
       ),
@@ -293,20 +340,38 @@ export default function KanbanBoard() {
         <Group justify="space-between">
           <SegmentedControl
             value={view}
-            onChange={(value) => setView(value as "board" | "table")}
+            onChange={(value) => setView(value as "board" | "table" | "calendar")}
             data={[
               { label: "Board View", value: "board" },
               { label: "Table View", value: "table" },
+              { label: "Calendar", value: "calendar" },
             ]}
           />
-          {canEditTasks && (
+          {/* {canEditTasks && (
             <Button
               leftSection={<IconPlus size={16} />}
               onClick={() => setAddTaskModalOpened(true)}
             >
               Add Task
             </Button>
-          )}
+          )} */}
+          <Group>
+            {canEditTasks && (
+              <Button
+                leftSection={<IconPlus size={16} />}
+                onClick={() => setAddTaskModalOpened(true)}
+              >
+                Add Task
+              </Button>
+            )}
+            <Button
+              leftSection={<IconUsersGroup size={16} />}
+              onClick={() => setShowTeamModal(true)}
+              variant="outline"
+            >
+              Show Team
+            </Button>
+          </Group>
         </Group>
 
         <Group gap="sm">
@@ -377,8 +442,7 @@ export default function KanbanBoard() {
           </Group>
         )}
       </div>
-
-      {view === "board" ? (
+      {/* {view === "board" ? (
         <Kanban
           columns={filteredColumns}
           onDragEnd={handleDragEnd}
@@ -402,7 +466,41 @@ export default function KanbanBoard() {
           onTaskStatusChange={handleTaskStatusChange}
           statuses={statuses}
         />
+      )} */}
+      {view === "board" ? (
+        <Kanban
+          columns={filteredColumns}
+          onDragEnd={handleDragEnd}
+          onTaskClick={handleTaskClick}
+          onViewTask={handleTaskClick}
+          onAddTask={handleAddTaskToColumn}
+          onAddColumn={handleAddColumn}
+          onDeleteColumn={handleDeleteColumn}
+          onRenameColumn={handleRenameColumn}
+          isAddingColumn={isAddingColumn}
+          setIsAddingColumn={setIsAddingColumn}
+          newColumnTitle={newColumnTitle}
+          setNewColumnTitle={setNewColumnTitle}
+          canEditTasks={canEditTasks}
+          canDragTasks={canDragTasks}
+        />
+      ) : view === "table" ? (
+        <KanbanTableView
+          tasks={filteredColumns.flatMap((col) => col.cards)}
+          onViewTask={handleTaskClick}
+          onTaskStatusChange={handleTaskStatusChange}
+          statuses={statuses}
+        />
+      ) : (
+        <KanbanCalendar
+          tasks={filteredColumns.flatMap((col) => col.cards)}
+          onViewTask={handleTaskClick}
+          onTaskDeadlineChange={(id, deadline) =>
+            updateTask({ id, data: {deadline} })
+          }
+        />
       )}
+      
       <AddTaskModal
         opened={addTaskModalOpened}
         onClose={() => setAddTaskModalOpened(false)}
@@ -413,6 +511,30 @@ export default function KanbanBoard() {
         onClose={() => setTaskDetailModalOpened(false)}
         taskId={selectedTask?.id as string}
       />
+
+      {/* Modal hiển thị danh sách thành viên */}
+      <Drawer
+        opened={showTeamModal}
+        onClose={() => setShowTeamModal(false)}
+        title="Project Team Members"
+        position="right"
+        size="xl"
+        radius="md"
+        shadow="xl"
+        // withBorder
+        styles={{
+          body: {
+            height: "100vh",
+            overflowY: "auto",
+          },
+          content: {
+            display: "flex",
+            flexDirection: "column",
+          },
+        }}
+      >
+        <ProjectMember teamMembers={teamMembers} tasks={allTasks} />
+      </Drawer>
     </div>
   );
 }

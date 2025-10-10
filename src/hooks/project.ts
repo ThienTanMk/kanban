@@ -14,6 +14,8 @@ export const projectKeys = {
     [...projectKeys.details(), id, uid] as const,
   userProjects: (uid: string | undefined) =>
     [...projectKeys.all, "user-projects", uid] as const,
+  teamMembers: (projectId: string, uid: string|undefined) =>
+    [...projectKeys.all, "team-members", projectId, uid] as const
 };
 export const useProjects = (page = 1, limit = 10) => {
   const { uid } = useAuth();
@@ -80,6 +82,17 @@ export const useGetRoleOnProject = () => {
   return useQuery({
     queryKey: projectKeys.detail(currentProjectId as string),
     queryFn: () => projectApi.getRoleOnProject(currentProjectId as string),
+    enabled: !!currentProjectId && !!uid,
+    staleTime: 5 * 60 * 1000,
+  });
+};
+
+export const useGetTeamMembers = () => {
+  const { uid } = useAuth();
+  const { currentProjectId } = useProjectStore();
+  return useQuery({
+    queryKey: projectKeys.teamMembers(currentProjectId as string, uid),
+    queryFn: () => projectApi.getTeamMembers(currentProjectId as string),
     enabled: !!currentProjectId && !!uid,
     staleTime: 5 * 60 * 1000,
   });

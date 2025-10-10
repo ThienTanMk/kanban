@@ -54,7 +54,7 @@ const ProjectSidebar: React.FC<ProjectSidebarProps> = ({
     modals.openConfirmModal({
       title: "Delete Project",
       children: (
-        <Text size="sm">
+        <Text size="xl">
           Are you sure you want to delete "<strong>{project.name}</strong>"?
           This action cannot be undone.
         </Text>
@@ -126,7 +126,7 @@ const ProjectSidebar: React.FC<ProjectSidebarProps> = ({
             onClick={() => handleSelectProject(project)}
           >
             <Avatar
-              size="sm"
+              size="lg"
               color={isSelected ? "blue" : "gray"}
               variant={isSelected ? "filled" : "light"}
               radius="sm"
@@ -186,7 +186,7 @@ const ProjectSidebar: React.FC<ProjectSidebarProps> = ({
             </Avatar>
             <Box style={{ flex: 1, minWidth: 0 }}>
               <Group justify="space-between" align="center" wrap="nowrap">
-                <Text size="sm" fw={isSelected ? 600 : 400} truncate>
+                <Text size="md" fw={isSelected ? 600 : 400} truncate>
                   {project.name}
                 </Text>
                 {roleBadge && (
@@ -201,14 +201,14 @@ const ProjectSidebar: React.FC<ProjectSidebarProps> = ({
                 )}
               </Group>
               {project.description && (
-                <Text size="xs" c="dimmed" truncate>
+                <Text size="sm" c="dimmed" truncate>
                   {project.description}
                 </Text>
               )}
               {project.endDate && (
                 <Group gap={4} wrap="nowrap">
-                  <IconCalendar size={10} />
-                  <Text size="xs" c="dimmed">
+                  <IconCalendar size={15} />
+                  <Text size="md" c="dimmed">
                     Due: {dayjs(project.endDate).format("MMM DD")}
                   </Text>
                 </Group>
@@ -218,6 +218,7 @@ const ProjectSidebar: React.FC<ProjectSidebarProps> = ({
           <Menu position="bottom-end" withinPortal>
             <Menu.Target>
               <ActionIcon
+                component="div"
                 size="sm"
                 variant="subtle"
                 color="gray"

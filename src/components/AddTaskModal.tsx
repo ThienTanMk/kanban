@@ -1,5 +1,5 @@
 "use client";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
   Modal,
   TextInput,
@@ -30,6 +30,7 @@ export default function AddTaskModal({
   const [priority, setPriority] = useState<Priority>(Priority.MEDIUM);
   const [assignees, setAssignees] = useState<string[]>([]);
   const [deadline, setDeadline] = useState<Date | null>(null);
+  const [isGenerativeMode, setIsGenerativeMode] = useState(false);
   const { data: me } = useGetMe();
   const currentUser = me?.name || "";
   const { data: availableUsers } = useGetAvailableUsers();
@@ -52,23 +53,72 @@ export default function AddTaskModal({
     setPriority(Priority.MEDIUM);
     setAssignees([]);
     setDeadline(null);
+    setIsGenerativeMode(false);
     onClose();
   };
+
+  const handleGenerativeSubmit = () => {
+    setIsGenerativeMode(true);
+  };
+
+  const handlePreferAddTask = () => {
+    setIsGenerativeMode(false);
+  };
+
+  const handlePreferGenerative = () => {
+    setIsGenerativeMode(false);
+  };
+  //để tạm sao thay đổi bằng api
+  useEffect(() => {
+    if (opened) {
+      setTitle(title);
+      setDescription(description);
+      setPriority(priority);
+      setAssignees([]);
+      setDeadline(deadline);
+    }
+  }, [opened, isGenerativeMode]);
+
   return (
     <Modal
       opened={opened}
       onClose={onClose}
-      title="Add New Task"
-      size="md"
-      centered
+      title={
+        <div className="flex items-center justify-between w-full">
+          <Text size="xl" fw={700}>
+            Add New Task
+          </Text>
+
+          {isGenerativeMode && (
+            <Text size="xl" fw={700} style={{ marginLeft: "325px" }}  >
+              Generative Task
+            </Text>
+          )}
+        </div>
+      }
+      // size={isGenerativeMode ? "90vw" : "xl"}
+      size="xl" 
+      centered={!isGenerativeMode}
+      // centered={true}
+      classNames={{
+        content: `border-2 border-gray-300 rounded-xl shadow-xl  
+                  ${
+                    isGenerativeMode
+                      ? "absolute top-[10%] max-w-[100%] flex flex-row"
+                      : "absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2"
+                  }`,
+        body: isGenerativeMode ? "flex flex-row w-full h-full p-4" : "",
+      }}
     >
-      <Stack gap="md">
+      <Stack gap="lg" className={isGenerativeMode ? "w-1/2 pr-4" : "w-full"}>
         <TextInput
           label="Task Title"
           placeholder="Enter task title"
           value={title}
           onChange={(e) => setTitle(e.target.value)}
           required
+          size="lg"
+          labelProps={{ style: { fontSize: "1.1rem", fontWeight: 600 } }}
         />
         <Textarea
           label="Description"
@@ -76,6 +126,8 @@ export default function AddTaskModal({
           value={description}
           onChange={(e) => setDescription(e.target.value)}
           minRows={3}
+          size="lg"
+          labelProps={{ style: { fontSize: "1.1rem", fontWeight: 600 } }}
         />
         <Select
           label="Priority"
@@ -88,6 +140,7 @@ export default function AddTaskModal({
             { value: "MEDIUM", label: "Medium" },
             { value: "HIGH", label: "High" },
           ]}
+          size="lg"
         />
         <MultiSelect
           label="Assignees"
@@ -101,15 +154,16 @@ export default function AddTaskModal({
             })) || []
           }
           searchable
+          size="lg"
         />
         <div>
-          <Text size="sm" fw={500} mb="xs">
+          <Text size="lg" fw={500} mb="xs">
             Authors
           </Text>
           <Text size="sm" c="dimmed">
             {authors}
           </Text>
-          <Text size="xs" c="dimmed" mt="xs">
+          <Text size="sm" c="dimmed" mt="xs">
             Authors are automatically set to the current user and cannot be
             changed.
           </Text>
@@ -122,16 +176,105 @@ export default function AddTaskModal({
             setDeadline(value ? dayjs(value).toDate() : null)
           }
           clearable
+          size="lg"
         />
-        <div className="flex gap-2 justify-end">
-          <Button variant="outline" onClick={onClose}>
-            Cancel
-          </Button>
-          <Button onClick={handleSubmit} disabled={!title.trim()}>
-            Add Task
-          </Button>
+        <div className="flex gap-3 justify-end">
+          {!isGenerativeMode ? (
+            <>
+              <Button variant="outline" size="lg" onClick={onClose}>
+                Cancel
+              </Button>
+              <Button size="lg" onClick={handleSubmit} disabled={!title.trim()}>
+                Add Task
+              </Button>
+              <Button
+                size="lg"
+                onClick={handleGenerativeSubmit}
+                disabled={!title.trim()}
+              >
+                Generative Task
+              </Button>
+            </>
+          ) : (
+            <div className="flex justify-end">
+              <Button size="lg" onClick={handlePreferAddTask}>
+                Prefer Add
+              </Button>
+              <div className="flex-1" />
+            </div>
+          )}
         </div>
       </Stack>
+      {isGenerativeMode && (
+        <Stack gap="lg" className="w-1/2 pl-4">
+          <TextInput
+            label="Generated Task Title"
+            placeholder="Generated task title"
+            value={title} //thay bằng giá trị từ agent 
+            onChange={(e) => setTitle(e.target.value)}
+            required
+            size="lg"
+            labelProps={{ style: { fontSize: "1.1rem", fontWeight: 600 } }}
+          />
+          <Textarea
+            label="Generated Description"
+            placeholder="Generated task description"
+            value={description} //thay bằng giá trị từ agent 
+            onChange={(e) => setDescription(e.target.value)}
+            minRows={3}
+            size="lg"
+            labelProps={{ style: { fontSize: "1.1rem", fontWeight: 600 } }}
+          />
+          <Select
+            label="Generated Priority"
+            value={priority} // thay bằng giá trị từ agent
+            onChange={(value) =>
+              setPriority((value as Priority) || Priority.MEDIUM)
+            }
+            data={[
+              { value: "LOW", label: "Low" },
+              { value: "MEDIUM", label: "Medium" },
+              { value: "HIGH", label: "High" },
+            ]}
+            size="lg"
+          />
+          <MultiSelect
+            label="Generated Assignees"
+            placeholder="Generated assignees"
+            value={assignees} // thay bằng giá trị từ agent 
+            onChange={setAssignees}
+            data={[]} // API 
+            searchable
+            size="lg"
+          />
+          <div>
+            <Text size="lg" fw={500} mb="xs">
+              Authors
+            </Text>
+            <Text size="sm" c="dimmed">
+              {authors}
+            </Text>
+            <Text size="sm" c="dimmed" mt="xs">
+              Authors are automatically set to the current user and cannot be changed.
+            </Text>
+          </div>
+          <DateTimePicker
+            label="Generated Deadline"
+            placeholder="Generated deadline"
+            value={deadline} //thay bằng giá trị từ agent 
+            onChange={(value) =>
+              setDeadline(value ? dayjs(value).toDate() : null)
+            }
+            clearable
+            size="lg"
+          />
+          <div className="flex justify-end">
+            <Button size="lg" onClick={handlePreferGenerative}>
+              Prefer Generative
+            </Button>
+          </div>
+        </Stack>
+      )}
     </Modal>
   );
 }

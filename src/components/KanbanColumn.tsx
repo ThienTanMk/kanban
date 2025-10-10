@@ -69,7 +69,7 @@ export default function KanbanColumn({
         shadow="md"
         radius="md"
         p="md"
-        className="bg-gray-100 min-w-[240px] w-[240px]"
+        className="bg-gray-100 min-w-[240px] w-[240px] border border-[#e0e0e0] rounded-md shadow-sm"
       >
         <Group justify="space-between" mb="md">
           <Group gap="xs" style={{ flex: 1 }}>

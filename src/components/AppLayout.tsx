@@ -47,14 +47,16 @@ export default function AppLayout({
       <AppShell.Header>
         <Group h="100%" px="md" justify="space-between">
           <Group>
-            <Text size="xl" fw={700} c="blue">
+            <Text style={{fontSize: "25px"}} 
+              fw={700} c="blue">
               TaskBoard
             </Text>
           </Group>
           <Group gap="sm">
-            <Menu shadow="md" width={200}>
+            <Menu shadow="md" width={300}>
               <Menu.Target>
                 <Button
+                  // className="text-lg"
                   variant="subtle"
                   leftSection={
                     <Avatar size="sm" src={me?.avatar} radius="xl">
@@ -62,21 +64,29 @@ export default function AppLayout({
                     </Avatar>
                   }
                 >
-                  {me?.name}
+                  <Text size="lg" fw={500}>
+                    {me?.name}
+                  </Text>
                 </Button>
               </Menu.Target>
               <Menu.Dropdown>
-                <Menu.Label>{me?.email}</Menu.Label>
+                <Menu.Label>
+                  <Text size="md" fw={500} lineClamp={1}>
+                    {me?.email}
+                  </Text>
+                </Menu.Label>
                 <Menu.Divider />
                 <Menu.Item
-                  leftSection={<IconUser size={14} />}
+                  leftSection={<IconUser size={20} />}
                   onClick={onNavigateToProfile}
                 >
-                  Profile
+                  <Text size="lg">
+                    Profile
+                  </Text>
                 </Menu.Item>
                 <Menu.Divider />
                 <Menu.Item
-                  leftSection={<IconLogout size={14} />}
+                  leftSection={<IconLogout size={20} />}
                   color="red"
                   onClick={onLogout}
                 >

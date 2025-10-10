@@ -46,25 +46,28 @@ export default function KanbanScreen() {
         {}
         {currentProject && (
           <div className="mb-6">
-            <Group justify="space-between" mb="md">
+            <Group justify="space-between" mb="lg">
               <div>
-                <Text size="xl" fw={700}>
+                <Text style={{fontSize: "28px"}} 
+                  fw={700}>
                   {currentProject.name}
                 </Text>
                 {currentProject.description && (
-                  <Text size="sm" c="dimmed">
+                  <Text size="lg" c="dimmed">
                     {currentProject.description}
                   </Text>
                 )}
               </div>
-              <Group gap="sm">
+              <Group gap="lg" ml="md">
                 {canShareProject && (
                   <Button
                     variant="outline"
-                    leftSection={<IconShare size={16} />}
+                    leftSection={<IconShare size={20} />}
                     onClick={() => setShareModalOpened(true)}
                   >
-                    Share Project
+                    <Text size="md" fw={600}>
+                      Share Project
+                    </Text>
                   </Button>
                 )}
                 <NotificationDropdown />

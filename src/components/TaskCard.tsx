@@ -18,12 +18,14 @@ interface TaskCardProps {
   card: Task;
   index: number;
   onViewTask: (task: Task) => void;
+  isCalendarView?: boolean;
   canDragTasks?: boolean;
 }
 export default function TaskCard({
   card,
   index,
   onViewTask,
+  isCalendarView = false,
   canDragTasks = true,
 }: TaskCardProps) {
   const getPriorityColor = (priority?: string) => {
@@ -38,6 +40,31 @@ export default function TaskCard({
         return "gray";
     }
   };
+  if (isCalendarView) {
+    const priorityColor = getPriorityColor(card.priority);
+    return (
+      <Draggable
+        key={card.id}
+        draggableId={card.id}
+        index={index}
+        isDragDisabled={!canDragTasks}
+      >
+        {(provided) => (
+          <div
+            ref={provided.innerRef}
+            {...provided.draggableProps}
+            {...provided.dragHandleProps}
+            onClick={() => onViewTask(card)}
+            className="flex items-center justify-between w-full p-2 rounded-md cursor-pointer mb-1 bg-gray-100 hover:bg-gray-200"
+          >
+            <Text size="md" fw={500} c={priorityColor}>
+              {card.name}
+            </Text>
+          </div>
+        )}
+      </Draggable>
+    );
+  }
   const isDeadlineNear = (deadline?: string) => {
     if (!deadline) return false;
     const deadlineDate = dayjs(deadline);
@@ -78,7 +105,9 @@ export default function TaskCard({
           {...provided.dragHandleProps}
           shadow={snapshot.isDragging ? "xl" : "sm"}
           className={`bg-white cursor-pointer w-[200px] ${
-            snapshot.isDragging ? "ring-2 ring-blue-400" : ""
+            snapshot.isDragging
+              ? "ring-4 ring-blue-500"
+              : "border border-gray-200"
           }`}
           onClick={() => onViewTask(card)}
         >

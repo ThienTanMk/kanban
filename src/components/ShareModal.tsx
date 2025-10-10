@@ -14,6 +14,8 @@ import {
   ActionIcon,
   Loader,
   Alert,
+  Title,
+  Flex,
 } from "@mantine/core";
 import {
   IconTrash,
@@ -124,13 +126,18 @@ export default function ShareModal({ opened, onClose }: ShareModalProps) {
     return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
   };
   return (
-    <Modal opened={opened} onClose={onClose} title="Share Project" size="md">
+    <Modal opened={opened} onClose={onClose} title={<Title order={2}>Share Project</Title>}  
+      size="900px"
+      radius="md"
+      shadow="xl"
+      className="border border-gray-300" 
+      >
       <Stack gap="lg">
         <div>
-          <Text size="sm" fw={500} mb="xs">
+          <Text size="lg" fw={700} mb="mb">
             Invite by email
           </Text>
-          <Stack gap="sm">
+          <Stack gap="lg">
             <TextInput
               placeholder="Enter email address"
               value={email}
@@ -141,9 +148,9 @@ export default function ShareModal({ opened, onClose }: ShareModalProps) {
                 }
               }}
             />
-            <Group gap="sm" align="end">
+            <Group gap="lg" align="end">
               <Select
-                label="Role"
+                label={<Title order={4}>Role</Title>} 
                 value={role}
                 onChange={(value) =>
                   setRole((value as ProjectRole) || ProjectRole.MEMBER)
@@ -156,7 +163,7 @@ export default function ShareModal({ opened, onClose }: ShareModalProps) {
                 style={{ flex: 1 }}
               />
               <Button
-                leftSection={<IconSend size={16} />}
+                leftSection={<IconSend size={20} />}
                 onClick={handleSendInvite}
                 disabled={!email.trim() || !isValidEmail(email.trim())}
                 loading={isInviting}
@@ -171,10 +178,10 @@ export default function ShareModal({ opened, onClose }: ShareModalProps) {
 
         {hasInviteSent && (
           <div>
-            <Text size="sm" fw={500} mb="xs">
+            <Text size="lg" fw={500} mb="mb">
               Share link
             </Text>
-            <Group gap="sm">
+            <Group gap="lg">
               <TextInput value={inviteLink} readOnly style={{ flex: 1 }} />
               <Button
                 variant="outline"
@@ -250,30 +257,30 @@ export default function ShareModal({ opened, onClose }: ShareModalProps) {
         </div> */}
 
         <div>
-          <Text size="sm" fw={500} mb="xs">
+          <Text size="lg" fw={700} mb="mb">
             Invited Members ({invites?.length || 0})
           </Text>
-          <Stack gap="xs">
+          <Stack gap="lg">
             {invites && invites.length > 0 ? (
               invites.map((invite) => (
-                <Paper key={invite.id} p="sm" withBorder>
+                <Paper key={invite.id} p="lg" withBorder>
                   <Group justify="space-between">
-                    <Group gap="sm">
-                      <Avatar size="sm" radius="xl">
+                    <Group gap="md">
+                      <Avatar size="md" radius="xl">
                         {invite.email[0].toUpperCase()}
                       </Avatar>
                       <div>
-                        <Text size="sm" fw={500}>
+                        <Text size="md" fw={500}>
                           {invite.email}
                         </Text>
                         <Group gap="xs" mt={2}>
-                          <Text size="xs" c="dimmed">
+                          <Text size="md" c="dimmed">
                             Invited •{" "}
                             {dayjs(invite.createdAt).format("MMM DD, YYYY")}
                           </Text>
                           <Badge
                             variant="outline"
-                            size="xs"
+                            size="md"
                             color={
                               invite.role === ProjectRole.ADMIN
                                 ? "red"
@@ -287,10 +294,10 @@ export default function ShareModal({ opened, onClose }: ShareModalProps) {
                         </Group>
                       </div>
                     </Group>
-                    <Group gap="xs">
+                    <Group gap="lg">
                       <Badge
                         variant="light"
-                        size="sm"
+                        size="lg"
                         color={
                           invite.status === InviteStatus.PENDING
                             ? "yellow"
@@ -305,7 +312,7 @@ export default function ShareModal({ opened, onClose }: ShareModalProps) {
                         <ActionIcon
                           variant="subtle"
                           color="red"
-                          size="sm"
+                          size="xl"
                           onClick={() => handleRemoveInvite(invite.id)}
                         >
                           <IconTrash size={14} />
@@ -316,7 +323,7 @@ export default function ShareModal({ opened, onClose }: ShareModalProps) {
                 </Paper>
               ))
             ) : (
-              <Text size="sm" c="dimmed" ta="center" py="lg">
+              <Text size="lg" c="dimmed" ta="center" py="lg">
                 No pending invitations
               </Text>
             )}
