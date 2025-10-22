@@ -1,15 +1,37 @@
 import { useState } from "react";
-import { AppShell, Group, Button, Text, Avatar, Menu } from "@mantine/core";
-import { IconUser, IconSettings, IconLogout } from "@tabler/icons-react";
+import {
+  AppShell,
+  Group,
+  Button,
+  Text,
+  Avatar,
+  Menu,
+  Badge,
+  ActionIcon,
+  Indicator,
+  Divider,
+  Flex,
+  Box,
+  Tooltip,
+} from "@mantine/core";
+import {
+  IconUser,
+  IconLogout,
+  IconBell,
+  IconLayoutKanban,
+} from "@tabler/icons-react";
 import ProjectSidebar from "./ProjectSidebar";
 import ProjectModal from "./ProjectModal";
 import { Project } from "../types/api";
 import { useGetMe } from "@/hooks/user";
+import NotificationDropdown from "./NotificationDropdown";
+
 interface AppLayoutProps {
   children: React.ReactNode;
   onLogout: () => void;
   onNavigateToProfile: () => void;
 }
+
 export default function AppLayout({
   children,
   onLogout,
@@ -95,22 +117,28 @@ export default function AppLayout({
               </Menu.Dropdown>
             </Menu>
           </Group>
-        </Group>
-      </AppShell.Header>
-      <AppShell.Navbar>
-        <ProjectSidebar
-          onCreateProject={handleCreateProject}
-          onEditProject={handleEditProject}
-          collapsed={sidebarCollapsed}
-          onToggleCollapse={handleToggleCollapse}
-        />
-      </AppShell.Navbar>
-      <AppShell.Main>{children}</AppShell.Main>
+        </Group> 
+        <Divider />
+
+        {/* Main content */}
+        <Box
+          style={{
+            flex: 1,
+            backgroundColor: "var(--monday-bg-bg)", 
+            overflowY: "auto",
+            padding: "20px",
+          }}
+        >
+          {children}
+        </Box>
+      </Flex>
+
+      {/* Project Modal */}
       <ProjectModal
         opened={projectModalOpened}
         onClose={handleCloseModal}
         project={editingProject}
       />
-    </AppShell>
+    </Flex>
   );
 }

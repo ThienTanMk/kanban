@@ -109,6 +109,7 @@ export default function TaskCard({
               ? "ring-4 ring-blue-500"
               : "border border-gray-200"
           }`}
+          style={{ backgroundColor: 'var(--monday-bg-tertiary)' }}
           onClick={() => onViewTask(card)}
         >
           <Text fw={500} size="sm" mb="xs">

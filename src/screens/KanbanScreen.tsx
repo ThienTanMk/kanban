@@ -70,7 +70,7 @@ export default function KanbanScreen() {
                     </Text>
                   </Button>
                 )}
-                <NotificationDropdown />
+                {/* <NotificationDropdown /> */}
               </Group>
             </Group>
           </div>

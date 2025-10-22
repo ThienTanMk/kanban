@@ -105,7 +105,14 @@ export default function Kanban({
           <div
             {...provided.droppableProps}
             ref={provided.innerRef}
-            className="py-4 flex gap-4 overflow-x-auto min-h-[70vh]"
+            // className="py-4 flex gap-4 overflow-x-auto min-h-[70vh] px-2 md:px-4"
+            style={{
+              padding: "10px",
+              display: "flex",
+              gap: "16px",
+              overflowX: "auto",
+              minHeight: "70vh",
+            }}
           >
             {columns.map((column, index) => (
               <Draggable

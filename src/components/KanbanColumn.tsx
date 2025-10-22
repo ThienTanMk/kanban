@@ -69,7 +69,14 @@ export default function KanbanColumn({
         shadow="md"
         radius="md"
         p="md"
-        className="bg-gray-100 min-w-[240px] w-[240px] border border-[#e0e0e0] rounded-md shadow-sm"
+        // className="bg-gray-50 min-w-[240px] w-[240px] border border-[#e0e0e0] rounded-md shadow-sm"
+        style={{
+    backgroundColor: 'var(--monday-bg-tertiary)', // Thay bg-gray-50
+    minWidth: '240px',
+    width: '240px',
+    border: '1px solid var(--monday-border-primary)', // Thay border-[#e0e0e0]
+    borderRadius: '8px',
+  }}
       >
         <Group justify="space-between" mb="md">
           <Group gap="xs" style={{ flex: 1 }}>

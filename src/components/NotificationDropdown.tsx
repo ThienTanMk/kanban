@@ -130,17 +130,17 @@ export default function NotificationDropdown() {
             )}
           </ActionIcon>
         </Menu.Target>
-          <ActionIcon
+          {/* <ActionIcon
           variant="subtle"
           size="lg"
           onClick={() => setChatOpened(true)}
         >
           <IconMessageChatbot size={28} />
-          </ActionIcon>
+          </ActionIcon> */}
       </Group>
 
       {/* chatbot tạm */}
-      <Drawer
+      {/* <Drawer
         opened={chatOpened}
         onClose={() => setChatOpened(false)}
         title="Chatbot"
@@ -162,7 +162,7 @@ export default function NotificationDropdown() {
             }}
           />
         </div>
-      </Drawer>
+      </Drawer> */}
 
       <Menu.Dropdown>
         <Group justify="space-between" p="xs" pb="sm">
