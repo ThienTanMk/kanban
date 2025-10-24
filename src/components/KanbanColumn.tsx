@@ -70,13 +70,15 @@ export default function KanbanColumn({
         radius="md"
         p="md"
         // className="bg-gray-50 min-w-[240px] w-[240px] border border-[#e0e0e0] rounded-md shadow-sm"
-        style={{
-    backgroundColor: 'var(--monday-bg-tertiary)', // Thay bg-gray-50
-    minWidth: '240px',
-    width: '240px',
-    border: '1px solid var(--monday-border-primary)', // Thay border-[#e0e0e0]
-    borderRadius: '8px',
-  }}
+style={{
+  backgroundColor: "var(--monday-bg-tertiary)",
+  width: "clamp(260px, 24vw, 340px)", // ✅ linh hoạt: min 260px, max 340px
+  height: "100%",
+  display: "flex",
+  flexDirection: "column",
+  flexShrink: 0,
+  transition: "width 0.3s ease",
+}}
       >
         <Group justify="space-between" mb="md">
           <Group gap="xs" style={{ flex: 1 }}>
@@ -129,7 +131,15 @@ export default function KanbanColumn({
             <div
               ref={provided.innerRef}
               {...provided.droppableProps}
-              className="flex flex-col gap-2 min-h-[100px]"
+              // className="flex flex-col gap-2 flex-1 overflow-y-auto"
+               style={{
+          flex: 1,               
+          display: "flex",
+          flexDirection: "column",
+          gap: "8px",
+          overflowY: "auto",     
+          paddingBottom: "8px",
+        }}
             >
               {column.cards.map((card, idx) => (
                 <TaskCard

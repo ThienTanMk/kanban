@@ -5,6 +5,7 @@ import { IconClock } from "@tabler/icons-react";
 import dayjs from "dayjs";
 import relativeTime from "dayjs/plugin/relativeTime";
 import { Task } from "@/types/api";
+import { memo } from "react";
 dayjs.extend(relativeTime);
 interface FileAttachment {
   id: string;
@@ -55,7 +56,8 @@ export default function TaskCard({
             {...provided.draggableProps}
             {...provided.dragHandleProps}
             onClick={() => onViewTask(card)}
-            className="flex items-center justify-between w-full p-2 rounded-md cursor-pointer mb-1 bg-gray-100 hover:bg-gray-200"
+            className="flex items-center justify-between w-full p-2 rounded-md cursor-pointer mb-1 bg-gray-600 hover:bg-gray-800"
+            
           >
             <Text size="md" fw={500} c={priorityColor}>
               {card.name}
@@ -104,12 +106,12 @@ export default function TaskCard({
           {...provided.draggableProps}
           {...provided.dragHandleProps}
           shadow={snapshot.isDragging ? "xl" : "sm"}
-          className={`bg-white cursor-pointer w-[200px] ${
+          className={`bg-white cursor-pointer w-full ${
             snapshot.isDragging
               ? "ring-4 ring-blue-500"
               : "border border-gray-200"
           }`}
-          style={{ backgroundColor: 'var(--monday-bg-tertiary)' }}
+          style={{ backgroundColor: "var(--monday-bg-card)" }}
           onClick={() => onViewTask(card)}
         >
           <Text fw={500} size="sm" mb="xs">

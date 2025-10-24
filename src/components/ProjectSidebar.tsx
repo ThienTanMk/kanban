@@ -1,7 +1,7 @@
 import { ActionIcon, Box, Divider, Text } from "@mantine/core";
 import { IconChevronRight } from "@tabler/icons-react";
 import { useProjectStore } from "../stores/projectStore";
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { useUserProjects, useDeleteProject } from "../hooks/project";
 import { Project } from "../types/api";
 import {
@@ -63,8 +63,25 @@ const ProjectSidebar: React.FC<ProjectSidebarProps> = ({
     unassigned: true,
   });
 
+  // Load customFolders và favoriteProjectIds từ local storage khi component mount
+  useEffect(() => {
+    const savedFolders = localStorage.getItem("customFolders");
+    if (savedFolders) {
+      setCustomFolders(JSON.parse(savedFolders));
+    }
+    const savedFavorites = localStorage.getItem("favoriteProjectIds");
+    if (savedFavorites) {
+      setFavoriteProjectIds(new Set(JSON.parse(savedFavorites)));
+    }
+  }, []);
+
+  // Lưu customFolders và favoriteProjectIds vào local storage khi thay đổi
+  useEffect(() => {
+    localStorage.setItem("customFolders", JSON.stringify(customFolders));
+    localStorage.setItem("favoriteProjectIds", JSON.stringify(Array.from(favoriteProjectIds)));
+  }, [customFolders, favoriteProjectIds]);
+
   const toggleFolder = (key: string) => {
-    console.log("Toggling folder:", key);
     setExpandedFolders((prev) => ({
       ...prev,
       [key]: !prev[key],
@@ -79,7 +96,6 @@ const ProjectSidebar: React.FC<ProjectSidebarProps> = ({
       } else {
         newSet.add(projectId);
       }
-      console.log("Toggled favorite for project:", projectId, newSet);
       return newSet;
     });
   };
@@ -91,7 +107,6 @@ const ProjectSidebar: React.FC<ProjectSidebarProps> = ({
         name: newFolderName.trim(),
         projectIds: [],
       };
-      console.log("Creating new folder:", newFolder);
       setCustomFolders([...customFolders, newFolder]);
       setExpandedFolders((prev) => ({ ...prev, [newFolder.id]: true }));
       setNewFolderName("");
@@ -100,7 +115,6 @@ const ProjectSidebar: React.FC<ProjectSidebarProps> = ({
   };
 
   const addProjectToFolder = (projectId: number, folderId: string) => {
-    console.log("Adding project", projectId, "to folder", folderId);
     setCustomFolders((folders) =>
       folders.map((folder) => {
         const filteredIds = folder.projectIds.filter((id) => id !== projectId);
@@ -185,7 +199,6 @@ const ProjectSidebar: React.FC<ProjectSidebarProps> = ({
         display: "flex",
         flexDirection: "column",
         backgroundColor: "#141416",
-        borderRight: "1px solid #393D5A",
       }}
     >
       {collapsed ? (

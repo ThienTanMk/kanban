@@ -1,5 +1,5 @@
 "use client";
-import { useState, useMemo, useEffect } from "react";
+import { useState, useMemo } from "react";
 import {
   Group,
   SegmentedControl,
@@ -11,12 +11,11 @@ import {
   Alert,
   Container,
   Text,
-  Divider,
+  Drawer,
   Box,
   Paper,
   Tooltip,
-  Modal,
-  Drawer,
+  Divider,
 } from "@mantine/core";
 import { modals } from "@mantine/modals";
 import { DropResult } from "@hello-pangea/dnd";
@@ -26,28 +25,23 @@ import {
   IconFilter,
   IconX,
   IconAlertCircle,
-  IconChartBar,
-  IconTrendingUp,
-  IconClock,
-  IconList,
-  IconProgressCheck,
-  IconCheck,
   IconUsersGroup,
+  IconList,
+  IconClock,
 } from "@tabler/icons-react";
 import AddTaskModal from "./AddTaskModal";
 import TaskDetailModal from "./TaskDetailModal";
 import KanbanTableView from "./KanbanTableView";
-import Summary from "./Summary";
 import KanbanCalendar from "./KanbanCalendar";
 import ProjectMember from "./ProjectMember";
+import Summary from "./Summary";
 import Kanban from "./Kanban";
 import { useProjectStore } from "../stores/projectStore";
 import {
   useCreateTask,
-  useCurrentProjectTasks,
   useTasksByProject,
   useUpdateTaskStatus,
-  useUpdateTask
+  useUpdateTask,
 } from "../hooks/task";
 import {
   useAddStatus,
@@ -58,17 +52,21 @@ import {
 import { Task, CreateTaskDto } from "@/types/api";
 import { unionBy } from "lodash";
 import { usePermissions } from "@/hooks/usePermissions";
-import { useGetTeamMembers, useGetRoleOnProject } from "@/hooks/project";
+import { useGetTeamMembers } from "@/hooks/project";
+import dayjs from "dayjs";
+import { notifications } from "@mantine/notifications";
+
 interface Column {
   id: string;
   title: string;
   cards: Task[];
 }
+
 export default function KanbanBoard() {
   const { currentProjectId } = useProjectStore();
   const { canEditTasks, canDragTasks } = usePermissions();
 
-  const { data: statuses = [], refetch: refetchStatues } = useGetStatuses();
+  const { data: statuses = [] } = useGetStatuses();
   const { mutateAsync: addStatus } = useAddStatus();
   const { mutateAsync: updateStatus } = useUpdateStatus();
   const { mutateAsync: deleteStatus } = useDeleteStatus();
@@ -81,14 +79,14 @@ export default function KanbanBoard() {
   } = useTasksByProject(currentProjectId as string);
 
   const { mutateAsync: createTask } = useCreateTask();
-  const [view, setView] = useState<"summary" | "board" | "table">(
+  const { mutateAsync: updateTask } = useUpdateTask();
+  const [view, setView] = useState<"summary" | "board" | "table" | "calendar">(
     "board"
   );
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedPriority, setSelectedPriority] = useState<string | null>(null);
   const [selectedAssignee, setSelectedAssignee] = useState<string | null>(null);
   const [selectedCreator, setSelectedCreator] = useState<string | null>(null);
-  // const [selectedTag, setSelectedTag] = useState<string | null>(null);
   const [addTaskModalOpened, setAddTaskModalOpened] = useState(false);
   const [taskDetailModalOpened, setTaskDetailModalOpened] = useState(false);
   const [selectedTask, setSelectedTask] = useState<Task | null>(null);
@@ -99,48 +97,29 @@ export default function KanbanBoard() {
   );
   const { mutate: updateTaskStatus } = useUpdateTaskStatus();
 
-  const [showTeamModal, setShowTeamModal] = useState(false); // State cho modal hiển thị danh sách thành viên
-  const { data: teamMembers = [], isLoading: isLoadingTeam } =
-    useGetTeamMembers(); // Lấy danh sách thành viên
-  const { data: roleOnProject } = useGetRoleOnProject(); // Lấy vai trò
+  const [showTeamModal, setShowTeamModal] = useState(false);
+  const { data: teamMembers = [] } = useGetTeamMembers();
+
+  const defaultStatuses = [
+    { id: "todo", name: "To Do" },
+    { id: "inprogress", name: "In Progress" },
+    { id: "done", name: "Done" },
+  ];
 
   const columns: Column[] = useMemo(() => {
-    if (statuses.length > 0) {
-      return statuses.map((status) => ({
-        id: status.id,
-        title: status.name,
-        cards: tasks?.filter((task) => task.statusId === status.id) || [],
-      }));
-    } else {
-      return [
-        {
-          id: "todo",
-          title: "To Do",
-          cards: tasks?.filter((task) => task.statusId === "todo") || [],
-        },
-        {
-          id: "inprogress",
-          title: "In Progress",
-          cards: tasks?.filter((task) => task.statusId === "inprogress") || [],
-        },
-        {
-          id: "done",
-          title: "Done",
-          cards: tasks?.filter((task) => task.statusId === "done") || [],
-        },
-      ];
-    }
+    // Hợp nhất 3 list mặc định với list từ API (loại trùng theo id)
+    const mergedStatuses = [
+      ...defaultStatuses,
+      ...statuses.filter((s) => !defaultStatuses.some((d) => d.id === s.id)),
+    ];
+
+    return mergedStatuses.map((status) => ({
+      id: status.id,
+      title: status.name,
+      cards: tasks?.filter((task) => task.statusId === status.id) || [],
+    }));
   }, [statuses, tasks]);
 
-  // const columns: Column[] = useMemo(() => {
-  //   return (
-  //     statuses?.map((status) => ({
-  //       id: status.id,
-  //       title: status.name,
-  //       cards: tasks?.filter((task) => task.statusId === status.id) || [],
-  //     })) || []
-  //   );
-  // }, [statuses, tasks]);
   const filteredColumns = useMemo(() => {
     return columns.map((column) => ({
       ...column,
@@ -178,8 +157,55 @@ export default function KanbanBoard() {
     allTasks.flatMap((task) => (task.owner ? [task.owner] : [])),
     (o) => o.id
   );
+
+  // Calculate statistics
+  const statistics = useMemo(() => {
+    const totalTasks = allTasks.length;
+    const dueSoonTasks = allTasks.filter((task) => {
+      if (!task.deadline) return false;
+      const daysUntil = dayjs(task.deadline).diff(dayjs(), "day");
+      return daysUntil >= 0 && daysUntil <= 3;
+    }).length;
+
+    return {
+      total: totalTasks,
+      dueSoon: dueSoonTasks,
+    };
+  }, [allTasks]);
+
+  // const handleDragEnd = (result: DropResult) => {
+  //   // Không cho phép drag & drop nếu là VIEWER
+  //   if (!canDragTasks) return;
+
+  //   const { destination, source, draggableId } = result;
+  //   if (!destination) return;
+  //   if (
+  //     destination.droppableId === source.droppableId &&
+  //     destination.index === source.index
+  //   ) {
+  //     return;
+  //   }
+
+  //   if (view === "board" || view === "table") {
+  //     try {
+  //       updateTaskStatus({
+  //         id: draggableId,
+  //         statusId: destination.droppableId,
+  //       });
+  //     } catch (error) {
+  //       console.error("Error handling drag end:", error);
+  //     }
+  //   } else if (view === "calendar") {
+  //     const newDateKey = destination.droppableId.replace("calendar-day-", "");
+  //     try {
+  //       updateTask({ id: draggableId, data: { deadline: newDateKey } });
+  //     } catch (error) {
+  //       console.error("Error updating task deadline:", error);
+  //     }
+  //   }
+  // };
+
   const handleDragEnd = (result: DropResult) => {
-    // Không cho phép drag & drop nếu là VIEWER
     if (!canDragTasks) return;
 
     const { destination, source, draggableId } = result;
@@ -190,34 +216,30 @@ export default function KanbanBoard() {
     ) {
       return;
     }
-    // try {
-    //   await updateTaskStatus({
-    //     id: draggableId,
-    //     statusId: destination.droppableId,
-    //   });
-    // } catch (error) {
-    //   console.error("Error handling drag end:", error);
-    // }
+
+    // ✅ OPTIMISTIC UPDATE - Cập nhật UI ngay lập tức
     if (view === "board" || view === "table") {
-      try {
-        updateTaskStatus({
-          id: draggableId,
-          statusId: destination.droppableId,
-        });
-      } catch (error) {
-        console.error("Error handling drag end:", error);
-      }
-    }
-    // Xử lý drag-drop cho calendar (cập nhật deadline)
-    else if (view === "calendar") {
+      // Tìm task đang được drag
+      const task = allTasks.find((t) => t.id === draggableId);
+      if (!task) return;
+
+      // Update local state ngay lập tức (nếu bạn có local state)
+      // hoặc dùng queryClient.setQueryData để update cache
+
+      // Gọi API trong background
+      updateTaskStatus({
+        id: draggableId,
+        statusId: destination.droppableId,
+      });
+    } else if (view === "calendar") {
       const newDateKey = destination.droppableId.replace("calendar-day-", "");
-      try {
-        updateTask({ id: draggableId, data: { deadline: newDateKey } });
-      } catch (error) {
-        console.error("Error updating task deadline:", error);
-      }
+      updateTask({
+        id: draggableId,
+        data: { deadline: newDateKey },
+      });
     }
   };
+
   const handleAddTask = async (data: CreateTaskDto) => {
     try {
       await createTask({
@@ -230,14 +252,17 @@ export default function KanbanBoard() {
     setAddTaskToColumnId(null);
     setAddTaskModalOpened(false);
   };
+
   const handleAddTaskToColumn = (columnId: string) => {
     setAddTaskToColumnId(columnId);
     setAddTaskModalOpened(true);
   };
+
   const handleTaskClick = (task: Task) => {
     setSelectedTask(task);
     setTaskDetailModalOpened(true);
   };
+
   const handleEditTask = (updatedTask: Task) => {
     console.log("Edit task:", updatedTask);
   };
@@ -257,23 +282,72 @@ export default function KanbanBoard() {
       },
     });
   };
+
+  // const handleAddColumn = async () => {
+  //   if (!newColumnTitle.trim()) return;
+  //   try {
+  //     await addStatus(newColumnTitle);
+  //     setNewColumnTitle("");
+  //     setIsAddingColumn(false);
+  //   } catch (error) {
+  //     console.error("Failed to add column:", error);
+  //   }
+  // };
+
   const handleAddColumn = async () => {
-    if (!newColumnTitle.trim()) return;
+    const trimmedTitle = newColumnTitle.trim();
+    if (!trimmedTitle) return;
+
+    const defaultNames = ["to do", "in progress", "done"];
+
+    if (defaultNames.includes(trimmedTitle.toLowerCase())) {
+      notifications.show({
+        title: "Duplicate name",
+        message:
+          "Tên này trùng với danh sách mặc định (To Do / In Progress / Done).",
+        color: "red",
+      });
+      return;
+    }
+    const isDuplicate = columns.some(
+      (col) => col.title.trim().toLowerCase() === trimmedTitle.toLowerCase()
+    );
+
+    if (isDuplicate) {
+      notifications.show({
+        title: "Duplicate name",
+        message: "Danh sách này đã tồn tại.",
+        color: "red",
+      });
+      return;
+    }
+
     try {
-      await addStatus(newColumnTitle);
+      await addStatus(trimmedTitle);
       setNewColumnTitle("");
       setIsAddingColumn(false);
+
+      notifications.show({
+        title: "Success",
+        message: "Tạo danh sách mới thành công!",
+        color: "green",
+      });
     } catch (error) {
       console.error("Failed to add column:", error);
+      notifications.show({
+        title: "Error",
+        message: "Không thể tạo danh sách. Vui lòng thử lại.",
+        color: "red",
+      });
     }
   };
+
   const handleDeleteColumn = async (columnId: string) => {
     const column = statuses?.find((s) => s.id === columnId);
     const tasksInColumn =
       tasks?.filter((task) => task.statusId === columnId) || [];
 
     if (tasksInColumn.length > 0) {
-      // Show warning if column has tasks
       modals.openConfirmModal({
         title: "Cannot Delete Column",
         children: (
@@ -292,8 +366,8 @@ export default function KanbanBoard() {
       title: "Delete Column",
       children: (
         <Text size="sm">
-          Are you sure you want to delete "{column?.name}" This action cannot be
-          undone.
+          Are you sure you want to delete "{column?.name}"? This action cannot
+          be undone.
         </Text>
       ),
       labels: { confirm: "Delete", cancel: "Cancel" },
@@ -307,6 +381,7 @@ export default function KanbanBoard() {
       },
     });
   };
+
   const handleRenameColumn = async (columnId: string, newTitle: string) => {
     try {
       await updateStatus({ id: columnId, name: newTitle });
@@ -314,6 +389,7 @@ export default function KanbanBoard() {
       console.error("Failed to rename column:", error);
     }
   };
+
   const handleTaskStatusChange = async (taskId: string, newStatus: string) => {
     try {
       await updateTaskStatus({
@@ -324,14 +400,16 @@ export default function KanbanBoard() {
       console.error("Failed to update task status:", error);
     }
   };
+
   const clearFilters = () => {
     setSearchTerm("");
     setSelectedPriority(null);
     setSelectedAssignee(null);
     setSelectedCreator(null);
-    // setSelectedTag(null);
   };
-  const hasActiveFilters =searchTerm || selectedPriority || selectedAssignee || selectedCreator;
+
+  const hasActiveFilters =
+    searchTerm || selectedPriority || selectedAssignee || selectedCreator;
 
   if (tasksLoading) {
     return (
@@ -342,6 +420,7 @@ export default function KanbanBoard() {
       </Container>
     );
   }
+
   if (tasksError) {
     return (
       <Container fluid>
@@ -359,6 +438,7 @@ export default function KanbanBoard() {
       </Container>
     );
   }
+
   if (!currentProjectId) {
     return (
       <Container fluid>
@@ -373,10 +453,28 @@ export default function KanbanBoard() {
       </Container>
     );
   }
+
   return (
-    <div className="h-full">
-      <div className="space-y-4">
-        <Group justify="space-between">
+    <Box
+      style={{
+        flex: 1,
+        display: "flex",
+        flexDirection: "column",
+        height: "calc(100vh - 150px)",
+        // overflow: "hidden",
+      }}
+    >
+      {/* Tabs and Stats Row */}
+      <Paper
+        p="md"
+        mb="md"
+        radius="md"
+        style={{
+          backgroundColor: "var(--monday-bg-secondary)",
+          border: "1px solid var(--monday-border-primary)",
+        }}
+      >
+        <Group justify="space-between" mb="md">
           <SegmentedControl
             value={view}
             onChange={(value) =>
@@ -388,33 +486,63 @@ export default function KanbanBoard() {
               { label: "Table View", value: "table" },
               { label: "Calendar", value: "calendar" },
             ]}
-            style={{
-              color: "var(--monday-text-primary)",
-              backgroundColor: "var(--monday-bg-secondary)",
-              border: "1px solid var(--monday-border-primary)",
-            }}
           />
-          <Divider my="xs" />
 
-          <Group>
+          <Group gap="md">
+            {/* Task Statistics */}
+            <Group gap="xs">
+              <Group gap="xs">
+                <IconList size={14} color="var(--monday-text-tertiary)" />
+                <Text size="xs" c="var(--monday-text-secondary)">
+                  {statistics.total}
+                </Text>
+              </Group>
+              <Text size="sm" c="var(--monday-text-secondary)">
+                Total Tasks
+              </Text>
+            </Group>
+
+            <Group gap="xs">
+              <IconClock
+                size={14}
+                color={
+                  statistics.dueSoon > 0
+                    ? "orange"
+                    : "var(--monday-text-tertiary)"
+                }
+              />
+              <Text
+                size="xs"
+                c={
+                  statistics.dueSoon > 0
+                    ? "orange"
+                    : "var(--monday-text-secondary)"
+                }
+              >
+                {statistics.dueSoon} due soon
+              </Text>
+            </Group>
+
             {canEditTasks && (
               <Button
                 leftSection={<IconPlus size={16} />}
                 onClick={() => setAddTaskModalOpened(true)}
+                size="sm"
               >
-                Add Task
+                New Task
               </Button>
             )}
+
             <Button
               leftSection={<IconUsersGroup size={16} />}
               onClick={() => setShowTeamModal(true)}
-              variant="outline"
+              size="sm"
             >
-              Show Team
+              Team
             </Button>
           </Group>
         </Group>
-        <Divider />
+        {/* <Divider /> */}
         <Box>
           <Group gap="sm">
             <TextInput
@@ -474,19 +602,19 @@ export default function KanbanBoard() {
           </Group>
         </Box>
         {hasActiveFilters && (
-          <Group gap="xs">
+          <Group gap="xs" mt="sm">
             {searchTerm && (
-              <Badge variant="light" color="blue">
+              <Badge variant="light" color="blue" size="sm">
                 Search: {searchTerm}
               </Badge>
             )}
             {selectedPriority && (
-              <Badge variant="light" color="orange">
+              <Badge variant="light" color="orange" size="sm">
                 Priority: {selectedPriority}
               </Badge>
             )}
             {selectedAssignee && (
-              <Badge variant="light" color="green">
+              <Badge variant="light" color="green" size="sm">
                 Assignee:{" "}
                 {
                   assignees.find((a) => a.userId === selectedAssignee)?.user
@@ -495,14 +623,13 @@ export default function KanbanBoard() {
               </Badge>
             )}
             {selectedCreator && (
-              <Badge variant="light" color="violet">
+              <Badge variant="light" color="violet" size="sm">
                 Creator: {creators.find((c) => c.id === selectedCreator)?.name}
               </Badge>
             )}
           </Group>
         )}
-        <Divider />
-      </div>
+      </Paper>
       {view === "board" ? (
         <Kanban
           columns={filteredColumns}
@@ -550,7 +677,6 @@ export default function KanbanBoard() {
         taskId={selectedTask?.id as string}
       />
 
-      {/* Modal hiển thị danh sách thành viên */}
       <Drawer
         opened={showTeamModal}
         onClose={() => setShowTeamModal(false)}
@@ -559,14 +685,9 @@ export default function KanbanBoard() {
         size="xl"
         radius="md"
         shadow="xl"
-        // withBorder
-        classNames={{
-          body: "h-screen overflow-y-auto",
-          content: "flex flex-col",
-        }}
       >
         <ProjectMember teamMembers={teamMembers} tasks={allTasks} />
       </Drawer>
-    </div>
+    </Box>
   );
 }

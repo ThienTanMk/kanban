@@ -6,7 +6,7 @@ import { createTheme, MantineColorsTuple } from '@mantine/core';
 // ============================================
 export const themeMondayDark = createTheme({
   primaryColor: 'mondayBlue',
-  
+
   colors: {
     // Monday Blue - Primary brand color
     mondayBlue: [
@@ -21,7 +21,7 @@ export const themeMondayDark = createTheme({
       '#004A9E', // 8
       '#003A7A', // 9
     ] as MantineColorsTuple,
-    
+
     // Monday Purple - Secondary brand
     mondayPurple: [
       '#F3E8FF', // 0
@@ -102,15 +102,15 @@ export const themeMondayDark = createTheme({
       '#1F2347',    // 5
       '#1E2140',    // 6
       '#1C1F3B',    // 7
-      '#181B34',    // 8
+      '#181C30',    // 8
       '#151829',    // 9
     ] as MantineColorsTuple,
   },
-  
+
   white: '#FFFFFF',
   black: '#1C1F3B',
   primaryShade: 6,
-  
+
   // ============================================
   // COMPONENT STYLES - Mantine 8 Compatible
   // Removed all &[data-*] selectors
@@ -131,13 +131,13 @@ export const themeMondayDark = createTheme({
           color: '#FFFFFF',
         },
         navbar: {
-          backgroundColor: '#181B34',
+          backgroundColor: '#181C30',
           borderRight: '1px solid #393D5A',
           color: '#FFFFFF',
         },
       },
     },
-    
+
     Paper: {
       styles: {
         root: {
@@ -149,7 +149,7 @@ export const themeMondayDark = createTheme({
         },
       },
     },
-    
+
     Card: {
       styles: {
         root: {
@@ -161,7 +161,7 @@ export const themeMondayDark = createTheme({
         },
       },
     },
-    
+
     Modal: {
       styles: {
         content: {
@@ -186,7 +186,7 @@ export const themeMondayDark = createTheme({
         },
       },
     },
-    
+
     Drawer: {
       styles: {
         content: {
@@ -204,7 +204,7 @@ export const themeMondayDark = createTheme({
         },
       },
     },
-    
+
     Input: {
       styles: {
         input: {
@@ -213,7 +213,7 @@ export const themeMondayDark = createTheme({
           borderRadius: '4px',
           color: '#FFFFFF',
           fontSize: '14px',
-          
+
           '&::placeholder': {
             color: '#7E7E8F',
           },
@@ -226,7 +226,7 @@ export const themeMondayDark = createTheme({
         },
       },
     },
-    
+
     TextInput: {
       styles: {
         input: {
@@ -238,7 +238,7 @@ export const themeMondayDark = createTheme({
         },
       },
     },
-    
+
     Select: {
       styles: {
         input: {
@@ -260,7 +260,7 @@ export const themeMondayDark = createTheme({
         },
       },
     },
-    
+
     Button: {
       defaultProps: {
         color: 'mondayBlue',
@@ -282,7 +282,7 @@ export const themeMondayDark = createTheme({
             backgroundColor: '#0073EA',
             color: '#FFFFFF',
             border: '1px solid transparent',
-            
+
             '&:hover': {
               backgroundColor: '#0085FF',
             },
@@ -293,7 +293,7 @@ export const themeMondayDark = createTheme({
             backgroundColor: 'transparent',
             borderColor: '#393D5A',
             color: '#FFFFFF',
-            
+
             '&:hover': {
               backgroundColor: '#323759',
             },
@@ -303,7 +303,7 @@ export const themeMondayDark = createTheme({
           root: {
             backgroundColor: 'transparent',
             color: '#D0D4E4',
-            
+
             '&:hover': {
               backgroundColor: 'rgba(255, 255, 255, 0.08)',
             },
@@ -313,7 +313,7 @@ export const themeMondayDark = createTheme({
           root: {
             backgroundColor: '#323759',
             color: '#FFFFFF',
-            
+
             '&:hover': {
               backgroundColor: '#3A4066',
             },
@@ -321,7 +321,7 @@ export const themeMondayDark = createTheme({
         }),
       },
     },
-    
+
     SegmentedControl: {
       styles: {
         root: {
@@ -342,7 +342,7 @@ export const themeMondayDark = createTheme({
         },
       },
     },
-    
+
     Badge: {
       styles: {
         root: {
@@ -378,7 +378,7 @@ export const themeMondayDark = createTheme({
         }),
       },
     },
-    
+
     Menu: {
       styles: {
         dropdown: {
@@ -408,7 +408,7 @@ export const themeMondayDark = createTheme({
         },
       },
     },
-    
+
     Text: {
       styles: {
         root: {
@@ -416,7 +416,7 @@ export const themeMondayDark = createTheme({
         },
       },
     },
-    
+
     Title: {
       styles: {
         root: {
@@ -424,7 +424,7 @@ export const themeMondayDark = createTheme({
         },
       },
     },
-    
+
     Divider: {
       styles: {
         root: {
@@ -432,7 +432,7 @@ export const themeMondayDark = createTheme({
         },
       },
     },
-    
+
     Alert: {
       styles: {
         root: {
@@ -447,7 +447,7 @@ export const themeMondayDark = createTheme({
         },
       },
     },
-    
+
     Avatar: {
       styles: {
         root: {
@@ -457,7 +457,7 @@ export const themeMondayDark = createTheme({
         },
       },
     },
-    
+
     Tooltip: {
       styles: {
         tooltip: {
@@ -472,13 +472,13 @@ export const themeMondayDark = createTheme({
         },
       },
     },
-    
+
     Loader: {
       defaultProps: {
         color: 'mondayBlue',
       },
     },
-    
+
     Table: {
       styles: {
         table: {
@@ -499,6 +499,11 @@ export const themeMondayDark = createTheme({
         },
         tr: {
           borderBottom: '1px solid #393D5A',
+          transition: 'background-color 0.2s ease',
+
+          '&:hover': {
+            backgroundColor: '#252849', // Màu hover tối nhẹ
+          },
         },
         td: {
           color: '#FFFFFF',
@@ -507,7 +512,7 @@ export const themeMondayDark = createTheme({
         },
       },
     },
-    
+
     Tabs: {
       styles: {
         root: {
@@ -524,7 +529,7 @@ export const themeMondayDark = createTheme({
         },
       },
     },
-    
+
     Checkbox: {
       styles: {
         input: {
@@ -539,7 +544,7 @@ export const themeMondayDark = createTheme({
         },
       },
     },
-    
+
     Switch: {
       styles: {
         track: {
@@ -557,7 +562,7 @@ export const themeMondayDark = createTheme({
         },
       },
     },
-    
+
     Progress: {
       styles: {
         root: {
@@ -569,13 +574,13 @@ export const themeMondayDark = createTheme({
         },
       },
     },
-    
+
     RingProgress: {
       defaultProps: {
         thickness: 8,
       },
     },
-    
+
     Notification: {
       styles: {
         root: {

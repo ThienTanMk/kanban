@@ -95,11 +95,13 @@ body {
 :root {
   /* Background Colors */
   --monday-bg-primary: #1e233d;
-  --monday-bg-bg: #181b34;
+  /* --monday-bg-bg: #181b34; */
+  --monday-bg-bg: #111322;
   --monday-bg-secondary: #292f4c;
   --monday-bg-tertiary: #2B3058;
   --monday-bg-hover: #323759;
   --monday-bg-active: #3A4066;
+  --monday-bg-card: #222647;
   --monday-sidebar-bg: #181B34;
   --monday-modal-bg: #252849;
   --monday-input-bg: #1E2140;
@@ -107,6 +109,7 @@ body {
   --monday-table-header: #1F2347;
   --monday-table-row-hover: #252A4D;
   --monday-bg-temp: #141416;
+  --monday-bg-unread-noti: #4B549B;
   
   /* Text Colors */
   --monday-text-primary: #FFFFFF;
@@ -178,6 +181,10 @@ body {
   min-height: 100vh;
   position: relative;
   transition: background-color 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+}
+html, body {
+  height: 100%;
+  overflow: hidden; /* chặn scroll ngoài */
 }
 
 /* ============================================
@@ -544,4 +551,13 @@ pre code {
     box-shadow: none !important;
     text-shadow: none !important;
   }
+}
+/* Tắt transitions khi đang drag */
+[data-rbd-dragging-state="dragging"] * {
+  transition: none !important;
+}
+
+/* Tối ưu performance cho dragging */
+[data-rbd-draggable-context-id] {
+  will-change: transform;
 }

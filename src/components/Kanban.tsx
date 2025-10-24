@@ -9,6 +9,7 @@ import {
 import { Button, TextInput, Paper } from "@mantine/core";
 import { IconPlus, IconX, IconCheck } from "@tabler/icons-react";
 import KanbanColumn from "./KanbanColumn";
+import { useRef, useEffect } from "react";
 interface FileAttachment {
   id: string;
   name: string;
@@ -98,6 +99,19 @@ export default function Kanban({
       setNewColumnTitle("");
     }
   };
+   //  ref để scroll tới form Add List
+  const addListRef = useRef<HTMLDivElement | null>(null);
+
+  // Khi bật form add list tự động scroll tới chỗ đó
+  useEffect(() => {
+    if (isAddingColumn && addListRef.current) {
+      addListRef.current.scrollIntoView({
+        behavior: "smooth",
+        block: "nearest",
+        inline: "end",
+      });
+    }
+  }, [isAddingColumn]);
   return (
     <DragDropContext onDragEnd={onDragEnd}>
       <Droppable droppableId="columns" direction="horizontal" type="COLUMN">
@@ -107,12 +121,18 @@ export default function Kanban({
             ref={provided.innerRef}
             // className="py-4 flex gap-4 overflow-x-auto min-h-[70vh] px-2 md:px-4"
             style={{
-              padding: "10px",
               display: "flex",
               gap: "16px",
               overflowX: "auto",
-              minHeight: "70vh",
+              // overflowY: "hidden",
+              height: "calc(100% - 8px)",
+              width: "100%",
+              alignItems: "stretch",
+              scrollPadding: "12px",
+              // scrollbarWidth: "none",
+              flexGrow: 1,
             }}
+            className="hide-scrollbar"
           >
             {columns.map((column, index) => (
               <Draggable
@@ -146,7 +166,7 @@ export default function Kanban({
               </Draggable>
             ))}
             {provided.placeholder}
-            <div className="min-w-[280px] flex-shrink-0">
+            <div ref={addListRef} className="flex-shrink-0">
               {isAddingColumn ? (
                 <Paper p="md" shadow="sm" style={{ minWidth: "280px" }}>
                   <TextInput

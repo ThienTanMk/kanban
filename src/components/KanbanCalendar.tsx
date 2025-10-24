@@ -1,5 +1,6 @@
 "use client";
 import { useState, useMemo } from "react";
+import clsx from "clsx";
 import {
   Paper,
   Text,
@@ -124,7 +125,7 @@ export default function KanbanCalendar({
             ref={provided.innerRef}
             {...provided.droppableProps}
           >
-            <Text size="sm" fw={500} c={isInViewPeriod ? "black" : "dimmed"}>
+            <Text size="sm" fw={500}>
               {day.date()}
             </Text>
             <Stack gap="xs" mt="xs">
@@ -183,6 +184,7 @@ export default function KanbanCalendar({
                           index={index}
                           onViewTask={onViewTask}
                           isCalendarView={true}
+                          
                         />
                       </div>
                     )}
@@ -226,7 +228,7 @@ export default function KanbanCalendar({
       <Grid columns={7} gutter="xs">
         {["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].map((day) => (
           <Grid.Col key={day} span={1}>
-            <Text size="xs" fw={700} ta="center" c="dimmed">
+            <Text size="xs" fw={700} ta="center">
               {day}
             </Text>
           </Grid.Col>

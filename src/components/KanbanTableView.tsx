@@ -410,9 +410,16 @@ export default function KanbanTableView({
   return (
     <Container
       fluid
-      className="bg-[var(--monday-bg-board)] text-[var(--monday-text-primary)] min-h-screen p-4"
+      className="bg-[var(--monday-bg-board)] text-[var(--monday-text-primary)]"
+      style={{
+        width: "100vw",
+        maxWidth: "100%",
+        paddingLeft: 0,
+        paddingRight: 0,
+        margin: 0,
+      }}
     >
-      <div className="mb-4">
+      <div className="mb-4 p-1">
         <Text size="lg" fw={600} c="var(--monday-text-primary)">
           Tasks Table View by Status
         </Text>
@@ -423,7 +430,7 @@ export default function KanbanTableView({
         </Text>
       </div>
       <DragDropContext onDragEnd={handleDragEnd}>
-        <Stack gap="lg">
+        <Stack>
           {taskGroups.map((group) => (
             <Paper
               key={group.status}
@@ -469,11 +476,12 @@ export default function KanbanTableView({
                     {group.tasks.length > 0 ? (
                       <Table
                         // striped
-                        highlightOnHover
+                        highlightOnHover={false}
                         // className="w-full table-fixed border-collapse"
+                        // [&_tbody_tr]:bg-[var(--monday-bg-card)]
                         className="
                           [&_thead_tr_th]:bg-[var(--monday-bg-tertiary)]
-                          [&_tbody_tr]:bg-[var(--monday-bg-card)]
+                          [&_tbody_tr]:transition-colors
                           [&_tbody_tr:hover]:bg-[var(--monday-bg-hover)] 
                           [&_th]:text-[var(--monday-text-secondary)] 
                           [&_td]:text-[var(--monday-text-primary)] 

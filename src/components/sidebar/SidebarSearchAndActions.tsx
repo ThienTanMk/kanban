@@ -5,8 +5,10 @@ import {
   TextInput,
   UnstyledButton,
   Divider,
+  Group,
 } from "@mantine/core";
 import { IconSearch, IconPlus, IconList } from "@tabler/icons-react";
+import NotificationDropdown from "../NotificationDropdown";
 
 interface SidebarSearchAndActionsProps {
   searchTerm: string;
@@ -37,6 +39,26 @@ export const SidebarSearchAndActions: React.FC<
         >
           Main
         </Text>
+        <div
+          className="flex items-center cursor-pointer"
+          onMouseEnter={(e) => {
+              e.currentTarget.style.backgroundColor = "rgba(255,255,255,0.04)";
+          }}
+          onMouseLeave={(e) => {
+              e.currentTarget.style.backgroundColor = "transparent";
+          }}
+          onClick={(e) => {
+            // tìm nút <button> (ActionIcon) bên trong NotificationDropdown và click nó
+            const iconButton = e.currentTarget.querySelector("button");
+            if (iconButton) iconButton.click();
+          }}
+        >
+          <NotificationDropdown />
+          <Text size="sm" flex={1}>
+            Notifications
+          </Text>
+        </div>
+
         {/* --- Clickable Label (Projects / Folders) --- */}
         <UnstyledButton
           onClick={() => setShowAllProjects(!showAllProjects)}
@@ -103,8 +125,15 @@ export const SidebarSearchAndActions: React.FC<
           onChange={(e) => setSearchTerm(e.currentTarget.value)}
           leftSection={<IconSearch size={16} />}
           leftSectionPointerEvents="none"
-          style={{ flex: 1 }}
           size="sm"
+          styles={{
+            input: {
+              backgroundColor: "#1A1B1E", // nền input
+              border: "1px solid #2A2B2E", // viền nhẹ
+              color: "#D0D4E4", // chữ sáng
+              "::placeholder": { color: "#7E7E8F" }, // placeholder mờ
+            },
+          }}
         />
       </Stack>
     </Box>
