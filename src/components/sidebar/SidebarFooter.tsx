@@ -41,10 +41,10 @@ export const SidebarFooter: React.FC<SidebarFooterProps> = ({
         >
           {/* --- Total Projects --- */}
           <Group justify="space-between" gap="xs" mb="xs">
-            <Text size="xs" c="#7E7E8F">
+            <Text size="xs" c="dimmed">
               Total Projects
             </Text>
-            <Text size="xs" c="#9699A6" fw={600}>
+            <Text size="xs" fw={600}>
               {filteredProjects.length}
             </Text>
           </Group>

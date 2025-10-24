@@ -85,13 +85,52 @@ export const useDeleteTask = () => {
     },
   });
 };
+// export const useUpdateTaskStatus = () => {
+//   const { currentProjectId } = useProjectStore();
+//   const { uid } = useAuth();
+
+//   return useMutation({
+//     mutationFn: async ({ id, statusId }: { id: string; statusId: string }) => {
+//       // Optimistic update: Set data vào cache trước khi call API
+//       if (currentProjectId && uid) {
+//         const queryKey = taskKeys.byProject(currentProjectId, uid);
+//         const previousTasks = queryClient.getQueryData<Task[]>(queryKey);
+
+//         if (previousTasks) {
+//           const updatedTasks = previousTasks.map((task) =>
+//             task.id === id ? { ...task, statusId: statusId } : task
+//           );
+//           queryClient.setQueryData(queryKey, updatedTasks);
+//         }
+//       }
+
+//       return await taskApi.updateTaskStatus(id, statusId);
+//     },
+//     onSuccess: () => {
+//       if (currentProjectId && uid) {
+//         queryClient.invalidateQueries({
+//           queryKey: taskKeys.byProject(currentProjectId, uid),
+//         });
+//       }
+//     },
+//     onError: (error, variables) => {
+//       // Rollback optimistic update nếu API call thất bại
+//       if (currentProjectId && uid) {
+//         queryClient.invalidateQueries({
+//           queryKey: taskKeys.byProject(currentProjectId, uid),
+//         });
+//       }
+//       console.error("Failed to update task status:", error);
+//     },
+//   });
+// };
 export const useUpdateTaskStatus = () => {
   const { currentProjectId } = useProjectStore();
   const { uid } = useAuth();
 
   return useMutation({
     mutationFn: async ({ id, statusId }: { id: string; statusId: string }) => {
-      // Optimistic update: Set data vào cache trước khi call API
+      // ✅ Optimistic update trước
       if (currentProjectId && uid) {
         const queryKey = taskKeys.byProject(currentProjectId, uid);
         const previousTasks = queryClient.getQueryData<Task[]>(queryKey);
@@ -104,17 +143,20 @@ export const useUpdateTaskStatus = () => {
         }
       }
 
-      return await taskApi.updateTaskStatus(id, statusId);
+      // ✅ API call không await - fire and forget
+      return taskApi.updateTaskStatus(id, statusId);
     },
     onSuccess: () => {
+      // Không cần invalidate ngay vì đã optimistic update
+      // Chỉ refetch để đồng bộ với server
       if (currentProjectId && uid) {
-        queryClient.invalidateQueries({
+        queryClient.refetchQueries({
           queryKey: taskKeys.byProject(currentProjectId, uid),
         });
       }
     },
     onError: (error, variables) => {
-      // Rollback optimistic update nếu API call thất bại
+      // Rollback khi lỗi
       if (currentProjectId && uid) {
         queryClient.invalidateQueries({
           queryKey: taskKeys.byProject(currentProjectId, uid),

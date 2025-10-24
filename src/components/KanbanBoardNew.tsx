@@ -1,5 +1,5 @@
 "use client";
-import { useState, useMemo } from "react";
+import { useState, useMemo, useCallback } from "react";
 import {
   Group,
   SegmentedControl,
@@ -14,11 +14,9 @@ import {
   Drawer,
   Box,
   Paper,
-  Tooltip,
-  Divider,
 } from "@mantine/core";
 import { modals } from "@mantine/modals";
-import { DropResult } from "@hello-pangea/dnd";
+import { DragDropContext, DropResult } from "@hello-pangea/dnd";
 import {
   IconPlus,
   IconSearch,
@@ -29,6 +27,7 @@ import {
   IconList,
   IconClock,
 } from "@tabler/icons-react";
+import { useQueryClient } from "@tanstack/react-query";
 import AddTaskModal from "./AddTaskModal";
 import TaskDetailModal from "./TaskDetailModal";
 import KanbanTableView from "./KanbanTableView";
@@ -42,6 +41,7 @@ import {
   useTasksByProject,
   useUpdateTaskStatus,
   useUpdateTask,
+  taskKeys,
 } from "../hooks/task";
 import {
   useAddStatus,
@@ -63,6 +63,7 @@ interface Column {
 }
 
 export default function KanbanBoard() {
+  const queryClient = useQueryClient();
   const { currentProjectId } = useProjectStore();
   const { canEditTasks, canDragTasks } = usePermissions();
 
@@ -80,9 +81,9 @@ export default function KanbanBoard() {
 
   const { mutateAsync: createTask } = useCreateTask();
   const { mutateAsync: updateTask } = useUpdateTask();
-  const [view, setView] = useState<"summary" | "board" | "table" | "calendar">(
-    "board"
-  );
+  const { mutate: updateTaskStatus } = useUpdateTaskStatus();
+
+  const [view, setView] = useState<"summary" | "board" | "table" | "calendar">("board");
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedPriority, setSelectedPriority] = useState<string | null>(null);
   const [selectedAssignee, setSelectedAssignee] = useState<string | null>(null);
@@ -92,73 +93,59 @@ export default function KanbanBoard() {
   const [selectedTask, setSelectedTask] = useState<Task | null>(null);
   const [isAddingColumn, setIsAddingColumn] = useState(false);
   const [newColumnTitle, setNewColumnTitle] = useState("");
-  const [addTaskToColumnId, setAddTaskToColumnId] = useState<string | null>(
-    null
-  );
-  const { mutate: updateTaskStatus } = useUpdateTaskStatus();
-
+  const [addTaskToColumnId, setAddTaskToColumnId] = useState<string | null>(null);
   const [showTeamModal, setShowTeamModal] = useState(false);
+  
   const { data: teamMembers = [] } = useGetTeamMembers();
 
-  const defaultStatuses = [
-    { id: "todo", name: "To Do" },
-    { id: "inprogress", name: "In Progress" },
-    { id: "done", name: "Done" },
-  ];
-
   const columns: Column[] = useMemo(() => {
-    // Hợp nhất 3 list mặc định với list từ API (loại trùng theo id)
-    const mergedStatuses = [
-      ...defaultStatuses,
-      ...statuses.filter((s) => !defaultStatuses.some((d) => d.id === s.id)),
-    ];
-
-    return mergedStatuses.map((status) => ({
-      id: status.id,
-      title: status.name,
-      cards: tasks?.filter((task) => task.statusId === status.id) || [],
-    }));
+    if (statuses.length > 0) {
+      return statuses.map((status) => ({
+        id: status.id,
+        title: status.name,
+        cards: tasks?.filter((task) => task.statusId === status.id) || [],
+      }));
+    } else {
+      return [
+        {
+          id: "todo",
+          title: "To Do",
+          cards: tasks?.filter((task) => task.statusId === "todo") || [],
+        },
+        {
+          id: "inprogress",
+          title: "In Progress",
+          cards: tasks?.filter((task) => task.statusId === "inprogress") || [],
+        },
+        {
+          id: "done",
+          title: "Done",
+          cards: tasks?.filter((task) => task.statusId === "done") || [],
+        },
+      ];
+    }
   }, [statuses, tasks]);
+
 
   const filteredColumns = useMemo(() => {
     return columns.map((column) => ({
       ...column,
       cards: column.cards.filter((task) => {
-        const matchesSearch = task.name
-          ?.toLowerCase()
-          .includes(searchTerm.toLowerCase());
-        const matchesPriority =
-          !selectedPriority || task.priority === selectedPriority;
+        const matchesSearch = task.name?.toLowerCase().includes(searchTerm.toLowerCase());
+        const matchesPriority = !selectedPriority || task.priority === selectedPriority;
         const matchesAssignee =
-          !selectedAssignee ||
-          task.assignees?.map((a) => a.user.id).includes(selectedAssignee);
-        const matchesCreator =
-          !selectedCreator || task.ownerId === selectedCreator;
+          !selectedAssignee || task.assignees?.map((a) => a.user.id).includes(selectedAssignee);
+        const matchesCreator = !selectedCreator || task.ownerId === selectedCreator;
         return matchesSearch && matchesPriority && matchesAssignee;
       }),
     }));
-  }, [
-    columns,
-    searchTerm,
-    selectedPriority,
-    selectedAssignee,
-    selectedCreator,
-  ]);
-  const allTasks = columns.flatMap((col) => col.cards);
-  const priorities = unionBy(
-    allTasks.flatMap((task) => task.priority),
-    (o) => o
-  );
-  const assignees = unionBy(
-    allTasks.flatMap((task) => task.assignees || []),
-    (o) => o.userId
-  );
-  const creators = unionBy(
-    allTasks.flatMap((task) => (task.owner ? [task.owner] : [])),
-    (o) => o.id
-  );
+  }, [columns, searchTerm, selectedPriority, selectedAssignee, selectedCreator]);
 
-  // Calculate statistics
+  const allTasks = columns.flatMap((col) => col.cards);
+  const priorities = unionBy(allTasks.flatMap((task) => task.priority), (o) => o);
+  const assignees = unionBy(allTasks.flatMap((task) => task.assignees || []), (o) => o.userId);
+  const creators = unionBy(allTasks.flatMap((task) => (task.owner ? [task.owner] : [])), (o) => o.id);
+
   const statistics = useMemo(() => {
     const totalTasks = allTasks.length;
     const dueSoonTasks = allTasks.filter((task) => {
@@ -167,78 +154,43 @@ export default function KanbanBoard() {
       return daysUntil >= 0 && daysUntil <= 3;
     }).length;
 
-    return {
-      total: totalTasks,
-      dueSoon: dueSoonTasks,
-    };
+    return { total: totalTasks, dueSoon: dueSoonTasks };
   }, [allTasks]);
 
-  // const handleDragEnd = (result: DropResult) => {
-  //   // Không cho phép drag & drop nếu là VIEWER
-  //   if (!canDragTasks) return;
-
-  //   const { destination, source, draggableId } = result;
-  //   if (!destination) return;
-  //   if (
-  //     destination.droppableId === source.droppableId &&
-  //     destination.index === source.index
-  //   ) {
-  //     return;
-  //   }
-
-  //   if (view === "board" || view === "table") {
-  //     try {
-  //       updateTaskStatus({
-  //         id: draggableId,
-  //         statusId: destination.droppableId,
-  //       });
-  //     } catch (error) {
-  //       console.error("Error handling drag end:", error);
-  //     }
-  //   } else if (view === "calendar") {
-  //     const newDateKey = destination.droppableId.replace("calendar-day-", "");
-  //     try {
-  //       updateTask({ id: draggableId, data: { deadline: newDateKey } });
-  //     } catch (error) {
-  //       console.error("Error updating task deadline:", error);
-  //     }
-  //   }
-  // };
-
-  const handleDragEnd = (result: DropResult) => {
+  // ✅ OPTIMISTIC UPDATE - Giống Kaneo
+  const handleDragEnd = useCallback((result: DropResult) => {
     if (!canDragTasks) return;
 
     const { destination, source, draggableId } = result;
     if (!destination) return;
-    if (
-      destination.droppableId === source.droppableId &&
-      destination.index === source.index
-    ) {
+    if (destination.droppableId === source.droppableId && destination.index === source.index) {
       return;
     }
 
-    // ✅ OPTIMISTIC UPDATE - Cập nhật UI ngay lập tức
-    if (view === "board" || view === "table") {
-      // Tìm task đang được drag
-      const task = allTasks.find((t) => t.id === draggableId);
-      if (!task) return;
+    // ✅ Update cache ngay lập tức (không chờ API)
+    const queryKey = taskKeys.byProject(currentProjectId as string);
+    
+    queryClient.setQueryData<Task[]>(queryKey, (oldTasks) => {
+      if (!oldTasks) return oldTasks;
+      
+      return oldTasks.map(task => 
+        task.id === draggableId 
+          ? { ...task, statusId: destination.droppableId }
+          : task
+      );
+    });
 
-      // Update local state ngay lập tức (nếu bạn có local state)
-      // hoặc dùng queryClient.setQueryData để update cache
-
-      // Gọi API trong background
-      updateTaskStatus({
-        id: draggableId,
-        statusId: destination.droppableId,
-      });
-    } else if (view === "calendar") {
-      const newDateKey = destination.droppableId.replace("calendar-day-", "");
-      updateTask({
-        id: draggableId,
-        data: { deadline: newDateKey },
-      });
-    }
-  };
+    // ✅ API call chạy background
+    updateTaskStatus(
+      { id: draggableId, statusId: destination.droppableId },
+      {
+        onError: () => {
+          // Rollback khi fail
+          queryClient.invalidateQueries({ queryKey });
+        },
+      }
+    );
+  }, [canDragTasks, currentProjectId, queryClient, updateTaskStatus]);
 
   const handleAddTask = async (data: CreateTaskDto) => {
     try {
@@ -253,66 +205,33 @@ export default function KanbanBoard() {
     setAddTaskModalOpened(false);
   };
 
-  const handleAddTaskToColumn = (columnId: string) => {
+  const handleAddTaskToColumn = useCallback((columnId: string) => {
     setAddTaskToColumnId(columnId);
     setAddTaskModalOpened(true);
-  };
+  }, []);
 
-  const handleTaskClick = (task: Task) => {
+  const handleTaskClick = useCallback((task: Task) => {
     setSelectedTask(task);
     setTaskDetailModalOpened(true);
-  };
-
-  const handleEditTask = (updatedTask: Task) => {
-    console.log("Edit task:", updatedTask);
-  };
-  const handleDeleteTask = (taskId: string) => {
-    modals.openConfirmModal({
-      title: "Delete Task",
-      children: (
-        <Text size="sm">
-          Are you sure you want to delete this task? This action cannot be
-          undone.
-        </Text>
-      ),
-      labels: { confirm: "Delete", cancel: "Cancel" },
-      confirmProps: { color: "red" },
-      onConfirm: () => {
-        console.log("Delete task:", taskId);
-      },
-    });
-  };
-
-  // const handleAddColumn = async () => {
-  //   if (!newColumnTitle.trim()) return;
-  //   try {
-  //     await addStatus(newColumnTitle);
-  //     setNewColumnTitle("");
-  //     setIsAddingColumn(false);
-  //   } catch (error) {
-  //     console.error("Failed to add column:", error);
-  //   }
-  // };
+  }, []);
 
   const handleAddColumn = async () => {
     const trimmedTitle = newColumnTitle.trim();
     if (!trimmedTitle) return;
 
-    const defaultNames = ["to do", "in progress", "done"];
+    // const defaultNames = ["to do", "in progress", "done"];
+    // if (defaultNames.includes(trimmedTitle.toLowerCase())) {
+    //   notifications.show({
+    //     title: "Duplicate name",
+    //     message: "Tên này trùng với danh sách mặc định (To Do / In Progress / Done).",
+    //     color: "red",
+    //   });
+    //   return;
+    // }
 
-    if (defaultNames.includes(trimmedTitle.toLowerCase())) {
-      notifications.show({
-        title: "Duplicate name",
-        message:
-          "Tên này trùng với danh sách mặc định (To Do / In Progress / Done).",
-        color: "red",
-      });
-      return;
-    }
     const isDuplicate = columns.some(
       (col) => col.title.trim().toLowerCase() === trimmedTitle.toLowerCase()
     );
-
     if (isDuplicate) {
       notifications.show({
         title: "Duplicate name",
@@ -326,7 +245,6 @@ export default function KanbanBoard() {
       await addStatus(trimmedTitle);
       setNewColumnTitle("");
       setIsAddingColumn(false);
-
       notifications.show({
         title: "Success",
         message: "Tạo danh sách mới thành công!",
@@ -344,16 +262,15 @@ export default function KanbanBoard() {
 
   const handleDeleteColumn = async (columnId: string) => {
     const column = statuses?.find((s) => s.id === columnId);
-    const tasksInColumn =
-      tasks?.filter((task) => task.statusId === columnId) || [];
+    const tasksInColumn = tasks?.filter((task) => task.statusId === columnId) || [];
 
     if (tasksInColumn.length > 0) {
       modals.openConfirmModal({
         title: "Cannot Delete Column",
         children: (
           <Text size="sm">
-            This column contains {tasksInColumn.length} task(s). Please move or
-            delete all tasks before deleting the column.
+            This column contains {tasksInColumn.length} task(s). Please move or delete all tasks
+            before deleting the column.
           </Text>
         ),
         labels: { confirm: "OK", cancel: "Cancel" },
@@ -366,8 +283,7 @@ export default function KanbanBoard() {
       title: "Delete Column",
       children: (
         <Text size="sm">
-          Are you sure you want to delete "{column?.name}"? This action cannot
-          be undone.
+          Are you sure you want to delete "{column?.name}"? This action cannot be undone.
         </Text>
       ),
       labels: { confirm: "Delete", cancel: "Cancel" },
@@ -392,10 +308,7 @@ export default function KanbanBoard() {
 
   const handleTaskStatusChange = async (taskId: string, newStatus: string) => {
     try {
-      await updateTaskStatus({
-        id: taskId,
-        statusId: newStatus,
-      });
+      await updateTaskStatus({ id: taskId, statusId: newStatus });
     } catch (error) {
       console.error("Failed to update task status:", error);
     }
@@ -408,8 +321,7 @@ export default function KanbanBoard() {
     setSelectedCreator(null);
   };
 
-  const hasActiveFilters =
-    searchTerm || selectedPriority || selectedAssignee || selectedCreator;
+  const hasActiveFilters = searchTerm || selectedPriority || selectedAssignee || selectedCreator;
 
   if (tasksLoading) {
     return (
@@ -461,10 +373,9 @@ export default function KanbanBoard() {
         display: "flex",
         flexDirection: "column",
         height: "calc(100vh - 150px)",
-        // overflow: "hidden",
       }}
     >
-      {/* Tabs and Stats Row */}
+      {/* Filters */}
       <Paper
         p="md"
         mb="md"
@@ -489,7 +400,6 @@ export default function KanbanBoard() {
           />
 
           <Group gap="md">
-            {/* Task Statistics */}
             <Group gap="xs">
               <Group gap="xs">
                 <IconList size={14} color="var(--monday-text-tertiary)" />
@@ -505,19 +415,11 @@ export default function KanbanBoard() {
             <Group gap="xs">
               <IconClock
                 size={14}
-                color={
-                  statistics.dueSoon > 0
-                    ? "orange"
-                    : "var(--monday-text-tertiary)"
-                }
+                color={statistics.dueSoon > 0 ? "orange" : "var(--monday-text-tertiary)"}
               />
               <Text
                 size="xs"
-                c={
-                  statistics.dueSoon > 0
-                    ? "orange"
-                    : "var(--monday-text-secondary)"
-                }
+                c={statistics.dueSoon > 0 ? "orange" : "var(--monday-text-secondary)"}
               >
                 {statistics.dueSoon} due soon
               </Text>
@@ -542,7 +444,7 @@ export default function KanbanBoard() {
             </Button>
           </Group>
         </Group>
-        {/* <Divider /> */}
+
         <Box>
           <Group gap="sm">
             <TextInput
@@ -569,9 +471,7 @@ export default function KanbanBoard() {
               leftSection={<IconFilter size={16} />}
               data={priorities.map((priority) => ({
                 value: priority as string,
-                label: priority
-                  ? priority.charAt(0).toUpperCase() + priority.slice(1)
-                  : "",
+                label: priority ? priority.charAt(0).toUpperCase() + priority.slice(1) : "",
               }))}
               value={selectedPriority}
               onChange={setSelectedPriority}
@@ -601,6 +501,7 @@ export default function KanbanBoard() {
             )}
           </Group>
         </Box>
+
         {hasActiveFilters && (
           <Group gap="xs" mt="sm">
             {searchTerm && (
@@ -615,11 +516,7 @@ export default function KanbanBoard() {
             )}
             {selectedAssignee && (
               <Badge variant="light" color="green" size="sm">
-                Assignee:{" "}
-                {
-                  assignees.find((a) => a.userId === selectedAssignee)?.user
-                    ?.name
-                }
+                Assignee: {assignees.find((a) => a.userId === selectedAssignee)?.user?.name}
               </Badge>
             )}
             {selectedCreator && (
@@ -630,23 +527,25 @@ export default function KanbanBoard() {
           </Group>
         )}
       </Paper>
+
+      {/* ✅ CHỈ 1 DragDropContext duy nhất */}
       {view === "board" ? (
-        <Kanban
-          columns={filteredColumns}
-          onDragEnd={handleDragEnd}
-          onTaskClick={handleTaskClick}
-          onViewTask={handleTaskClick}
-          onAddTask={handleAddTaskToColumn}
-          onAddColumn={handleAddColumn}
-          onDeleteColumn={handleDeleteColumn}
-          onRenameColumn={handleRenameColumn}
-          isAddingColumn={isAddingColumn}
-          setIsAddingColumn={setIsAddingColumn}
-          newColumnTitle={newColumnTitle}
-          setNewColumnTitle={setNewColumnTitle}
-          canEditTasks={canEditTasks}
-          canDragTasks={canDragTasks}
-        />
+        <DragDropContext onDragEnd={handleDragEnd}>
+          <Kanban
+            columns={filteredColumns}
+            onViewTask={handleTaskClick}
+            onAddTask={handleAddTaskToColumn}
+            onAddColumn={handleAddColumn}
+            onDeleteColumn={handleDeleteColumn}
+            onRenameColumn={handleRenameColumn}
+            isAddingColumn={isAddingColumn}
+            setIsAddingColumn={setIsAddingColumn}
+            newColumnTitle={newColumnTitle}
+            setNewColumnTitle={setNewColumnTitle}
+            canEditTasks={canEditTasks}
+            canDragTasks={canDragTasks}
+          />
+        </DragDropContext>
       ) : view === "table" ? (
         <KanbanTableView
           tasks={filteredColumns.flatMap((col) => col.cards)}
@@ -658,9 +557,7 @@ export default function KanbanBoard() {
         <KanbanCalendar
           tasks={filteredColumns.flatMap((col) => col.cards)}
           onViewTask={handleTaskClick}
-          onTaskDeadlineChange={(id, deadline) =>
-            updateTask({ id, data: { deadline } })
-          }
+          onTaskDeadlineChange={(id, deadline) => updateTask({ id, data: { deadline } })}
         />
       ) : (
         <Summary />
