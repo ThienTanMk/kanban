@@ -25,73 +25,6 @@ body {
   font-family: Arial, Helvetica, sans-serif;
 } */
 
-
-
-/* ============================================
-   🎨 THEME VARIABLES
-   Uncomment theme bạn muốn dùng (chỉ chọn 1)
-   ============================================ */
-
-/* 🔵 THEME 1: GRADE GREY (#bdc3c7 → #2c3e50) - XÁM SANG TRỌNG */
-/* :root {
-  --bg-gradient: linear-gradient(135deg, #bdc3c7 0%, #2c3e50 100%);
-  --bg-start: #bdc3c7;
-  --bg-end: #2c3e50;
-  --card-bg: rgba(255, 255, 255, 0.85);
-  --text-primary: #1a202c;
-  --text-secondary: #4a5568;
-  --text-on-dark: #f7fafc;
-  --border-color: rgba(189, 195, 199, 0.3);
-  --shadow-color: rgba(44, 62, 80, 0.15);
-} */
-
-/* 🟣 THEME 2: DULL (#C9D6FF → #E2E2E2) - XÁM NHẠT TINH TẾ */
-/* :root {
-  --bg-gradient: linear-gradient(135deg, #C9D6FF 0%, #E2E2E2 100%);
-  --bg-start: #C9D6FF;
-  --bg-end: #E2E2E2;
-  --card-bg: rgba(255, 255, 255, 0.88);
-  --text-primary: #2d3748;
-  --text-secondary: #4a5568;
-  --text-on-dark: #1a202c;
-  --border-color: rgba(201, 214, 255, 0.4);
-  --shadow-color: rgba(201, 214, 255, 0.2);
-} */
-
-/* 🔷 THEME 3: WHAT LIES BEYOND (#F0F2F0 → #000C40) - XANH DƯƠNG HUYỀN BÍ */
-/* :root {
-  --bg-gradient: linear-gradient(135deg, #F0F2F0 0%, #000C40 100%);
-  --bg-start: #F0F2F0;
-  --bg-end: #000C40;
-  --card-bg: rgba(255, 255, 255, 0.90);
-  --text-primary: #1a202c;
-  --text-secondary: #4a5568;
-  --text-on-dark: #f7fafc;
-  --border-color: rgba(122, 139, 165, 0.25);
-  --shadow-color: rgba(0, 12, 64, 0.18);
-} */
-
-/* ⚫ THEME 4: DARK SKIES (#4B79A1 → #283E51) - XANH ĐẬM TRẦM */
-/* :root {
-  --bg-gradient: linear-gradient(135deg, #4B79A1 0%, #283E51 100%);
-  --bg-start: #4B79A1;
-  --bg-end: #283E51;
-  --card-bg: rgba(255, 255, 255, 0.92);
-  --text-primary: #1a202c;
-  --text-secondary: #2d3748;
-  --text-on-dark: #f7fafc;
-  --border-color: rgba(75, 121, 161, 0.3);
-  --shadow-color: rgba(40, 62, 81, 0.2);
-} */
-
-/* ============================================
-   🌐 GLOBAL STYLES
-   ============================================ */
-
-/* ============================================
-   MONDAY.COM DARK THEME - CSS VARIABLES
-   Complete color palette from Monday's night mode
-   ============================================ */
 :root {
   /* Background Colors */
   --monday-bg-primary: #1e233d;
@@ -560,4 +493,9 @@ pre code {
 /* Tối ưu performance cho dragging */
 [data-rbd-draggable-context-id] {
   will-change: transform;
+}
+
+.custom-hover {
+  background-color: #1E213D !important;
+  color: var(--monday-bg-hover) !important;
 }

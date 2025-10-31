@@ -98,7 +98,7 @@ export default function KanbanScreen() {
           <Alert
             icon={<IconAlertCircle size={16} />}
             title="No Project Selected"
-            color="blue"
+            color="white"
             variant="light"
             mb="md"
           >

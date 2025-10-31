@@ -20,7 +20,6 @@ interface KanbanProps {
   canDragTasks?: boolean;
 }
 
-// ✅ Memoize component để tránh re-render không cần thiết
 export default memo(function Kanban({
   columns,
   onViewTask,
@@ -65,7 +64,6 @@ export default memo(function Kanban({
   };
 
   return (
-    // ✅ KHÔNG có DragDropContext ở đây nữa
     <Droppable droppableId="columns" direction="horizontal" type="COLUMN">
       {(provided) => (
         <div

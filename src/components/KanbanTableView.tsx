@@ -192,7 +192,7 @@ export default function KanbanTableView({
     <Table.Tr
       // className="bg-gray-50 border-l-[3px] border-l-[#228be6]"
       style={{
-        backgroundColor: "var(--monday-bg-tertiary)",
+        backgroundColor: "var(--monday-bg-card)",
         borderLeft: "3px solid #0073EA",
       }}
     >
@@ -465,7 +465,7 @@ export default function KanbanTableView({
                     {...provided.droppableProps}
                     style={{
                       backgroundColor: snapshot.isDraggingOver
-                        ? `var(--mantine-color-${group.color}-0)`
+                        ? `var(--monday-bg-active)`
                         : "transparent",
                       borderRadius: "4px",
                       minHeight: group.tasks.length === 0 ? "60px" : "auto",
@@ -475,10 +475,7 @@ export default function KanbanTableView({
                   >
                     {group.tasks.length > 0 ? (
                       <Table
-                        // striped
                         highlightOnHover={false}
-                        // className="w-full table-fixed border-collapse"
-                        // [&_tbody_tr]:bg-[var(--monday-bg-card)]
                         className="
                           [&_thead_tr_th]:bg-[var(--monday-bg-tertiary)]
                           [&_tbody_tr]:transition-colors
@@ -508,6 +505,8 @@ export default function KanbanTableView({
                               groupStatus={group.status}
                             />
                           ))}
+                      {provided.placeholder}
+
                         </Table.Tbody>
                       </Table>
                     ) : (
@@ -531,7 +530,14 @@ export default function KanbanTableView({
                         </Text>
                       </Box>
                     )}
-                    {provided.placeholder}
+                    {/* <div
+                      style={{
+                        backgroundColor: "var(--monday-bg-card)",
+                        minHeight: "1px",
+                      }}
+                    >
+                      {provided.placeholder}
+                    </div> */}
                   </Box>
                 )}
               </Droppable>

@@ -8,13 +8,14 @@ interface TaskCardProps {
   card: Task;
   onViewTask: (task: Task) => void;
   isDragging?: boolean;
+  isCalendarView?: boolean;
 }
 
-// ✅ Memo để tránh re-render không cần thiết
 export default memo(function TaskCard({
   card,
   onViewTask,
   isDragging = false,
+  isCalendarView = false,
 }: TaskCardProps) {
   const getPriorityColor = (priority?: string) => {
     switch (priority) {
@@ -49,7 +50,29 @@ export default memo(function TaskCard({
     if (diffInHours < 24) return `${Math.floor(diffInHours)}h left`;
     return date.format("MM/DD/YYYY");
   };
+  if (isCalendarView) {
+    const priorityColor = getPriorityColor(card.priority);
+    return (
+      <Card
+        shadow={isDragging ? "xl" : "sm"}
+        className={`cursor-pointer w-full ${
+          isDragging ? "ring-   4 ring-blue-500" : "border border-gray-200"
+        }`}
+        style={{
+          backgroundColor: "var(--monday-bg-card)",
+          transform: isDragging ? "scale(1.02)" : "scale(1)",
+          transition: isDragging ? "transform 200ms ease" : "none",
+          willChange: isDragging ? "transform" : "auto",
+        }}
+        onClick={() => onViewTask(card)}
+      >
+        <Text fw={500} size="sm" mb="xs"  c={priorityColor}>
+          {card.name}
+        </Text>
 
+      </Card>
+    );
+  } 
   return (
     <Card
       shadow={isDragging ? "xl" : "sm"}
@@ -58,7 +81,6 @@ export default memo(function TaskCard({
       }`}
       style={{
         backgroundColor: "var(--monday-bg-card)",
-        // ✅ GPU acceleration for smooth dragging
         transform: isDragging ? "scale(1.02)" : "scale(1)",
         transition: isDragging ? "transform 200ms ease" : "none",
         willChange: isDragging ? "transform" : "auto",

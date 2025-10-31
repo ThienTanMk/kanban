@@ -89,6 +89,7 @@ export default function KanbanBoard() {
   const [selectedAssignee, setSelectedAssignee] = useState<string | null>(null);
   const [selectedCreator, setSelectedCreator] = useState<string | null>(null);
   const [addTaskModalOpened, setAddTaskModalOpened] = useState(false);
+  const [initialDeadline, setInitialDeadline] = useState<string | null>(null); // giữ lại ngày ban đầu khi thêm task ở calendar
   const [taskDetailModalOpened, setTaskDetailModalOpened] = useState(false);
   const [selectedTask, setSelectedTask] = useState<Task | null>(null);
   const [isAddingColumn, setIsAddingColumn] = useState(false);
@@ -157,7 +158,6 @@ export default function KanbanBoard() {
     return { total: totalTasks, dueSoon: dueSoonTasks };
   }, [allTasks]);
 
-  // ✅ OPTIMISTIC UPDATE - Giống Kaneo
   const handleDragEnd = useCallback((result: DropResult) => {
     if (!canDragTasks) return;
 
@@ -167,7 +167,7 @@ export default function KanbanBoard() {
       return;
     }
 
-    // ✅ Update cache ngay lập tức (không chờ API)
+    // Update cache ngay lập tức (không chờ API)
     const queryKey = taskKeys.byProject(currentProjectId as string);
     
     queryClient.setQueryData<Task[]>(queryKey, (oldTasks) => {
@@ -180,7 +180,7 @@ export default function KanbanBoard() {
       );
     });
 
-    // ✅ API call chạy background
+    // API call chạy background
     updateTaskStatus(
       { id: draggableId, statusId: destination.droppableId },
       {
@@ -528,7 +528,6 @@ export default function KanbanBoard() {
         )}
       </Paper>
 
-      {/* ✅ CHỈ 1 DragDropContext duy nhất */}
       {view === "board" ? (
         <DragDropContext onDragEnd={handleDragEnd}>
           <Kanban
@@ -558,6 +557,10 @@ export default function KanbanBoard() {
           tasks={filteredColumns.flatMap((col) => col.cards)}
           onViewTask={handleTaskClick}
           onTaskDeadlineChange={(id, deadline) => updateTask({ id, data: { deadline } })}
+          onOpenAddTask={(deadline) => {
+            setInitialDeadline(deadline);
+            setAddTaskModalOpened(true);
+          }}
         />
       ) : (
         <Summary />
@@ -567,6 +570,7 @@ export default function KanbanBoard() {
         opened={addTaskModalOpened}
         onClose={() => setAddTaskModalOpened(false)}
         onAddTask={handleAddTask}
+        initialDeadline={initialDeadline}
       />
       <TaskDetailModal
         opened={taskDetailModalOpened}

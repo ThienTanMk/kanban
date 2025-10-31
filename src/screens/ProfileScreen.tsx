@@ -201,7 +201,7 @@ export default function ProfileScreen() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-[#111322]">
     {/* // <div className="min-h-screen bg-[#22272e] text-[#adbac7]"> */}
 
       <Container size="md" py="xl">

@@ -21,12 +21,14 @@ interface AddTaskModalProps {
   opened: boolean;
   onClose: () => void;
   onAddTask: (task: CreateTaskDto) => void;
+  initialDeadline?: string | null;
 }
 
 export default function AddTaskModal({
   opened,
   onClose,
   onAddTask,
+  initialDeadline,
 }: AddTaskModalProps) {
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
@@ -51,13 +53,17 @@ export default function AddTaskModal({
       statusId: "",
     });
 
+    resetForm();
+    onClose();
+  };
+
+  const resetForm = () => {
     setTitle("");
     setDescription("");
     setPriority(Priority.MEDIUM);
     setAssignees([]);
     setDeadline(null);
     setIsGenerativeMode(false);
-    onClose();
   };
 
   const handleGenerativeSubmit = () => {
@@ -74,13 +80,12 @@ export default function AddTaskModal({
   //để tạm sao thay đổi bằng api
   useEffect(() => {
     if (opened) {
-      setTitle(title);
-      setDescription(description);
-      setPriority(priority);
-      setAssignees([]);
-      setDeadline(deadline);
+      resetForm();
+      if (initialDeadline) {
+        setDeadline(dayjs(initialDeadline).toDate());
+      }
     }
-  }, [opened, isGenerativeMode]);
+  }, [opened, initialDeadline , isGenerativeMode]);
 
   return (
     <Modal

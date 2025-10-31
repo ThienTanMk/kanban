@@ -45,16 +45,20 @@ export default function SubtaskTree({ subtasks, onTaskClick }: SubtaskTreeProps)
               withBorder
               style={{
                 cursor: "pointer",
-                backgroundColor: level === 0 ? "#f8f9fa" : "#ffffff",
-                marginLeft: level * 24, // Thụt lề 24px mỗi cấp
-                borderLeft: level > 0 ? "3px solid #228be6" : undefined,
+                backgroundColor: level === 0 ?  "var(--monday-bg-tertiary)" :  "var(--monday-bg-card)",
+                marginLeft: level * 24,
+                borderLeft: level > 0 ? "3px solid var(--monday-primary)" : undefined,
+                borderColor: "var(--monday-border-primary)",
+                color: "var(--monday-text-primary)",
                 transition: "all 0.2s ease",
               }}
               onMouseEnter={(e) => {
-                e.currentTarget.style.backgroundColor = "#e7f5ff";
+                e.currentTarget.style.backgroundColor = "var(--monday-bg-hover)";
               }}
               onMouseLeave={(e) => {
-                e.currentTarget.style.backgroundColor = level === 0 ? "#f8f9fa" : "#ffffff";
+                e.currentTarget.style.backgroundColor =  level === 0
+                    ? "var(--monday-bg-tertiary)"
+                    : "var(--monday-bg-card)";
               }}
               onClick={() => onTaskClick(task)}
             >
@@ -62,7 +66,7 @@ export default function SubtaskTree({ subtasks, onTaskClick }: SubtaskTreeProps)
                 <Group gap="sm" style={{ flex: 1 }}>
                   {/* Icon chỉ định subtask */}
                   {level > 0 && (
-                    <IconCornerDownRight size={16} color="#228be6" />
+                    <IconCornerDownRight size={16} color="var(--monday-primary)" />
                   )}
                   {level === 0 && <div style={{ width: 16 }} />}
                   
@@ -71,7 +75,7 @@ export default function SubtaskTree({ subtasks, onTaskClick }: SubtaskTreeProps)
                       {task.name}
                     </Text>
                     {task.description && (
-                      <Text size="xs" c="dimmed" lineClamp={1}>
+                      <Text size="xs" lineClamp={1}>
                         {task.description}
                       </Text>
                     )}
