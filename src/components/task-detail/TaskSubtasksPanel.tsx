@@ -1,4 +1,3 @@
-// subtasks-panel.tsx
 "use client";
 import { Paper, Group, Text, ActionIcon } from "@mantine/core";
 import { IconBinaryTree, IconSparkles, IconX } from "@tabler/icons-react";

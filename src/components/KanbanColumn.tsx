@@ -123,8 +123,7 @@ export default memo(function KanbanColumn({
             )}
           </Group>
         </Group>
-
-        {/* ✅ DROPPABLE with FIXED SCROLL */}
+      
         <Droppable droppableId={column.id}>
           {(provided) => (
             <div
@@ -136,7 +135,7 @@ export default memo(function KanbanColumn({
                 flexDirection: "column",
                 gap: "8px",
                 overflowY: "auto",
-                minHeight: 0, // ✅ KEY FIX: Cho phép scroll khi có height: 100%
+                minHeight: 0, 
                 paddingBottom: "8px",
               }}
               className="scrollbar-thin scrollbar-thumb-gray-400"

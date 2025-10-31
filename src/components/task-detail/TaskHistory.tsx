@@ -1,4 +1,3 @@
-// history-section.tsx
 "use client";
 import { Stack, Paper, Group, Avatar, Text } from "@mantine/core";
 import dayjs from "dayjs";
