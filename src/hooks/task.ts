@@ -43,7 +43,10 @@ export const useCreateTask = () => {
   const { currentProjectId } = useProjectStore();
   const { uid } = useAuth();
   return useMutation({
-    mutationFn: (data: CreateTaskDto) => taskApi.createTask(data),
+    mutationFn: async (data: CreateTaskDto) => {
+      const res = await taskApi.createTask(data);
+      return res;
+    },
     onSuccess: (response) => {
       if (currentProjectId && uid) {
         queryClient.invalidateQueries({
