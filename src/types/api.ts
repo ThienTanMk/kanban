@@ -30,6 +30,7 @@ export interface UsersOnProject {
   joinedAt: Date;
   level?: Level;
   technologies?: string[];
+  profileCompleted?: boolean;
 }
 
 export interface TaskState {
@@ -206,7 +207,7 @@ export interface CreateTaskDto {
   statusId: string;
   tagIds?: string[];
   assignees?: string[];
-  deadline?: Date;
+  deadline?: string;
   actualTime?: number;
   complexity?: number;
   estimatedTime?: number;
@@ -480,8 +481,10 @@ export interface AddMemberDto {
 export interface UpdateMemberRoleRequest {
   role: ProjectRole;
 }
-export interface UpdateMemberRoleDto {
-  role: ProjectRole;
+export interface UpdateMemberOnProjectDto {
+  role?: ProjectRole;
+  level?: Level | null;
+  technologies?: string[] | null;
 }
 export interface UpdateMemberProfileDto {
   level?: Level | null;
@@ -551,4 +554,217 @@ export interface MailEvent {
   to: string;
   subject: string;
   content: string;
+}
+
+//Recommendation
+export enum RecommendationType {
+  TASK_SUGGESTION = "TASK_SUGGESTION",
+  PROJECT_OPTIMIZATION = "PROJECT_OPTIMIZATION",
+  RESOURCE_ALLOCATION = "RESOURCE_ALLOCATION",
+  PRIORITY_ADJUSTMENT = "PRIORITY_ADJUSTMENT",
+  DEADLINE_WARNING = "DEADLINE_WARNING",
+  SKILL_TRAINING = "SKILL_TRAINING",
+  WORKLOAD_BALANCING = "WORKLOAD_BALANCING",
+  SPRINT_OPTIMIZATION = "SPRINT_OPTIMIZATION",
+}
+export enum RecommendationStatus {
+  PENDING = "PENDING",
+  ACCEPTED = "ACCEPTED",
+  REJECTED = "REJECTED",
+  MODIFIED = "MODIFIED",
+  EXPIRED = "EXPIRED",
+}
+export enum FeedbackAction {
+  ACCEPTED = "ACCEPTED",
+  REJECTED = "REJECTED",
+  MODIFIED = "MODIFIED",
+  IGNORED = "IGNORED",
+  DEFERRED = "DEFERRED",
+}
+export interface AIRecommendation {
+  id: string;
+  type: RecommendationType;
+  title: string;
+  description: string;
+  recommendedData: Record<string, any>; // Json từ Prisma
+  reasoning?: string | null;
+  confidenceScore: number; // 0-1
+  status: RecommendationStatus;
+  expiresAt?: string | null; // ISO string
+  userId: string;
+  projectId?: string | null;
+  taskId?: string | null;
+  agentExecutionId?: string | null;
+  createdAt: string;
+  updatedAt: string;
+
+  // Relations (có thể được include)
+  user?: User;
+  project?: Project;
+  task?: Task;
+  feedback?: RecommendationFeedback[];
+}
+
+// Feedback cho Recommendation
+export interface RecommendationFeedback {
+  id: string;
+  recommendationId: string;
+  userId: string;
+  action: FeedbackAction;
+  starRating?: number | null; // 1-5
+  comment?: string | null;
+  helpfulnessRating?: number | null; // 1-5
+  accuracyRating?: number | null; // 1-5
+  relevanceRating?: number | null; // 1-5
+  timeToFeedback?: number | null; // ms
+  metadata?: Record<string, any> | null;
+  createdAt: string;
+  updatedAt: string;
+
+  // Relations
+  user?: User;
+  recommendation?: AIRecommendation;
+}
+
+// DTOs - chính xác theo backend
+export interface SubmitFeedbackDto {
+  action: FeedbackAction;
+  starRating?: number; // 1-5
+  helpfulnessRating?: number; // 1-5
+  accuracyRating?: number; // 1-5
+  relevanceRating?: number; // 1-5
+  comment?: string;
+}
+
+export interface UpdateRecommendationStatusDto {
+  status: RecommendationStatus;
+}
+
+// Analytics Response Type
+export interface FeedbackAnalytics {
+  totalRecommendations: number;
+  acceptedCount: number;
+  rejectedCount: number;
+  modifiedCount: number;
+  ignoredCount: number;
+  deferredCount: number;
+  averageStarRating: number;
+  averageHelpfulness: number;
+  averageAccuracy: number;
+  averageRelevance: number;
+  feedbackRate: number; // % người dùng phản hồi
+}
+
+// API Response Types cho Recommendation
+export type RecommendationResponse = ApiResponse<AIRecommendation>;
+export type RecommendationListResponse = ApiResponse<AIRecommendation[]>;
+export type ExpiringRecommendationsResponse = ApiResponse<AIRecommendation[]>;
+export type RecommendationAnalyticsResponse = ApiResponse<FeedbackAnalytics>;
+export type SubmitFeedbackResponse = ApiResponse<{ success: true }>;
+export type UpdateStatusResponse = ApiResponse<AIRecommendation>;
+
+// ==================== PERFORMANCES & ANALYTICS TYPES ====================
+
+export interface VelocityResponse {
+  projectId: string;
+  averageVelocity: number;
+  standardDeviation: number;
+  minimum: number;
+  maximum: number;
+  trend: 'increasing' | 'decreasing' | 'stable';
+  confidenceInterval: {
+    low: number;
+    high: number;
+    confidence: number;
+  };
+}
+
+export interface BurndownChartPoint {
+  date: string; // ISO string
+  idealRemaining: number;
+  actualRemaining: number;
+  completed: number;
+}
+
+export interface SprintReport {
+  sprintId: string;
+  startDate: string;
+  endDate: string;
+  totalStoryPoints: number;
+  completedStoryPoints: number;
+  completionPercentage: number;
+  velocity: number;
+  burndownChart: BurndownChartPoint[];
+  health: 'healthy' | 'at-risk' | 'critical';
+  metrics: {
+    schedulePerformanceIndex: number;
+    scopeChangeCount: number;
+    blockerCount: number;
+  };
+}
+
+export interface ProjectHealthReport {
+  projectId: string;
+  overallHealth: 'healthy' | 'at-risk' | 'critical';
+  schedule: {
+    status: 'on-track' | 'at-risk' | 'critical';
+    schedulePerformanceIndex: number;
+  };
+  risks: {
+    count: number;
+    highRiskCount: number;
+    materialisationRate: number;
+  };
+  resources: {
+    utilizationRate: number;
+    bottlenecks: string[];
+  };
+  quality: {
+    defectRate: number;
+    reworkPercentage: number;
+  };
+}
+
+export interface CompletionForecast {
+  projectId: string;
+  forecastDate: string;
+  probabilityOfCompletion: {
+    fifthPercentile: number;
+    fiftiethPercentile: number;
+    eightyFifthPercentile: number;
+  };
+  recommendedRiskMitigation: string[];
+}
+
+export interface UserPerformance {
+  userId: string;
+  totalTasksCompleted: number;
+  averageCycleTime: number;
+  onTimeDeliveryRate: number;
+  storyPointsDelivered: number;
+  velocityContribution: number;
+  focusTimePercentage: number;
+  blockerResolutionTime?: number;
+  feedbackScore?: number;
+}
+
+// AI Analysis Response (có thể là text hoặc structured)
+export interface AIAnalysisResponse {
+  summary: string;
+  insights: string[];
+  recommendations: string[];
+  risks: string[];
+  confidence: number;
+  generatedAt: string;
+}
+//Task AI
+export interface AssignTaskDto {
+  taskId: string;
+  userIds: string[];
+}
+export interface CreateTaskWithAIDto {
+  description: string;
+  projectId: string;
+  requiredSkills?: string[];
+  preferredTimeline?: number;
 }

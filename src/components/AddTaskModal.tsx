@@ -21,7 +21,7 @@ interface AddTaskModalProps {
   opened: boolean;
   onClose: () => void;
   onAddTask: (task: CreateTaskDto) => void;
-  initialDeadline?: string | null;
+  initialDeadline?: Date | null;
 }
 
 export default function AddTaskModal({
@@ -82,7 +82,7 @@ export default function AddTaskModal({
     if (opened) {
       resetForm();
       if (initialDeadline) {
-        setDeadline(dayjs(initialDeadline).toDate());
+        setDeadline(initialDeadline);
       }
     }
   }, [opened, initialDeadline]);

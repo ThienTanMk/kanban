@@ -35,6 +35,7 @@ interface MemberEditProfileProps {
   isUpdating?: boolean;
   isOwner?: boolean;
   currentUserId?: string;
+  isRequiredCompletion?: boolean;
 }
 
 const AVAILABLE_TECHNOLOGIES = [
@@ -76,6 +77,7 @@ export default function MemberEditProfile({
   isUpdating = false,
   isOwner = false,
   currentUserId,
+  isRequiredCompletion = false,
 }: MemberEditProfileProps) {
   const [role, setRole] = useState<ProjectRole | null>(null);
   const [level, setLevel] = useState<Level | null>(null);
@@ -111,6 +113,17 @@ export default function MemberEditProfile({
           JSON.stringify((member.technologies || []).sort())
         ) {
           profileData.technologies = technologies;
+        }
+
+        if (isRequiredCompletion) {
+          if (!level) {
+            setError("Level is required");
+            return;
+          }
+          if (!technologies || technologies.length === 0) {
+            setError("Please select at least one technology");
+            return;
+          }
         }
 
         if (Object.keys(profileData).length > 0) {
@@ -151,7 +164,7 @@ export default function MemberEditProfile({
   return (
     <Modal
       opened={opened}
-      onClose={onClose}
+      onClose={isRequiredCompletion ? () => {} : onClose}
       title={
         <Text size="lg" fw={700}>
           Edit Member Profile
@@ -237,6 +250,12 @@ export default function MemberEditProfile({
             variant="light"
           >
             {error}
+          </Alert>
+        )}
+
+        {isRequiredCompletion && (
+          <Alert color="blue" variant="light" mb="md">
+            Please complete your profile to join the project
           </Alert>
         )}
 

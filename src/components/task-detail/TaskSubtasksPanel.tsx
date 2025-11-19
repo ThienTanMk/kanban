@@ -3,7 +3,7 @@ import { Paper, Group, Text, ActionIcon } from "@mantine/core";
 import { IconBinaryTree, IconPlus, IconSparkles, IconX } from "@tabler/icons-react";
 import { Task } from "@/types/api";
 import SubtaskTree from "../SubtaskDetail";
-import { generateSubtasksForTask, GeneratedSubtask } from "../GenerativeSubtask";
+import { generateSubtasksForTask, GeneratedSubtask } from "../agent/GenerativeSubtask";
 import { useState } from "react";
 import { TaskAddSubtask } from "./TaskAddSubtask";
 

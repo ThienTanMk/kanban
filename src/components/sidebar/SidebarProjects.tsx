@@ -44,6 +44,7 @@ interface SidebarProjectsProps {
   toggleFolder: (key: string) => void;
   setCreateFolderModalOpened: (value: boolean) => void;
   collapsed: boolean;
+  onEditProject: (project: Project) => void;
 }
 
 export const SidebarProjects: React.FC<SidebarProjectsProps> = ({
@@ -66,6 +67,7 @@ export const SidebarProjects: React.FC<SidebarProjectsProps> = ({
   toggleFolder,
   setCreateFolderModalOpened,
   collapsed,
+  onEditProject,
 }) => {
   const getProjectsInFolder = (folderId: string) => {
     const folder = customFolders.find((f) => f.id === folderId);
@@ -176,6 +178,7 @@ export const SidebarProjects: React.FC<SidebarProjectsProps> = ({
                             handleDeleteProject={handleDeleteProject}
                             customFolders={customFolders}
                             favoriteProjectIds={favoriteProjectIds}
+                            onEditProject={onEditProject}
                           />
                         ) : (
                           <Text key={index} size="xs" c="red" ml="sm" py="xs">
@@ -205,6 +208,7 @@ export const SidebarProjects: React.FC<SidebarProjectsProps> = ({
                       handleSelectProject={handleSelectProject}
                       handleDeleteProject={handleDeleteProject}
                       favoriteProjectIds={favoriteProjectIds}
+                      onEditProject={onEditProject}
                     />
                   )}
 
@@ -225,6 +229,7 @@ export const SidebarProjects: React.FC<SidebarProjectsProps> = ({
                       handleSelectProject={handleSelectProject}
                       handleDeleteProject={handleDeleteProject}
                       favoriteProjectIds={favoriteProjectIds}
+                      onEditProject={onEditProject}
                     />
                   ))}
 
@@ -243,6 +248,7 @@ export const SidebarProjects: React.FC<SidebarProjectsProps> = ({
                       handleSelectProject={handleSelectProject}
                       handleDeleteProject={handleDeleteProject}
                       favoriteProjectIds={favoriteProjectIds}
+                      onEditProject={onEditProject}
                     />
                   )}
                 </>

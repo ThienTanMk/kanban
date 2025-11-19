@@ -21,8 +21,6 @@ import { DateTimePicker } from "@mantine/dates";
 import { CreateTaskDto, Priority } from "@/types/api";
 import { notifications } from "@mantine/notifications";
 import { IconClock, IconSparkles, IconUser, IconX } from "@tabler/icons-react";
-import { assign } from "lodash";
-import { ta } from "zod/v4/locales";
 import { getPriorityColor } from "@/lib/utils";
 
 export interface GeneratedTask {

@@ -78,7 +78,10 @@ const ProjectSidebar: React.FC<ProjectSidebarProps> = ({
   // Lưu customFolders và favoriteProjectIds vào local storage khi thay đổi
   useEffect(() => {
     localStorage.setItem("customFolders", JSON.stringify(customFolders));
-    localStorage.setItem("favoriteProjectIds", JSON.stringify(Array.from(favoriteProjectIds)));
+    localStorage.setItem(
+      "favoriteProjectIds",
+      JSON.stringify(Array.from(favoriteProjectIds))
+    );
   }, [customFolders, favoriteProjectIds]);
 
   const toggleFolder = (key: string) => {
@@ -190,7 +193,12 @@ const ProjectSidebar: React.FC<ProjectSidebarProps> = ({
     return !isInAnyFolder && !favoriteProjectIds.has(p.id);
   });
 
-  console.log("Rendering ProjectSidebar, collapsed:", collapsed, "unassignedProjects:", unassignedProjects);
+  console.log(
+    "Rendering ProjectSidebar, collapsed:",
+    collapsed,
+    "unassignedProjects:",
+    unassignedProjects
+  );
 
   return (
     <Box
@@ -216,7 +224,10 @@ const ProjectSidebar: React.FC<ProjectSidebarProps> = ({
         </Box>
       ) : (
         <>
-          <SidebarHeader collapsed={collapsed} onToggleCollapse={onToggleCollapse} />
+          <SidebarHeader
+            collapsed={collapsed}
+            onToggleCollapse={onToggleCollapse}
+          />
           <SidebarSearchAndActions
             searchTerm={searchTerm}
             setSearchTerm={setSearchTerm}
@@ -245,6 +256,7 @@ const ProjectSidebar: React.FC<ProjectSidebarProps> = ({
             toggleFolder={toggleFolder}
             setCreateFolderModalOpened={setCreateFolderModalOpened}
             collapsed={collapsed}
+            onEditProject={onEditProject}
           />
           <CreateFolderModal
             opened={createFolderModalOpened}
@@ -257,8 +269,8 @@ const ProjectSidebar: React.FC<ProjectSidebarProps> = ({
             filteredProjects={filteredProjects}
             collapsed={collapsed}
             me={me}
-            onLogout={onLogout}
-            onNavigateToProfile={onNavigateToProfile}
+            onLogout={onLogout ?? (() => {})} // fallback
+            onNavigateToProfile={onNavigateToProfile ?? (() => {})}
           />
         </>
       )}

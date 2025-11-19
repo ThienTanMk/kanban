@@ -91,7 +91,7 @@ export default function KanbanBoard() {
   const [selectedAssignee, setSelectedAssignee] = useState<string | null>(null);
   const [selectedCreator, setSelectedCreator] = useState<string | null>(null);
   const [addTaskModalOpened, setAddTaskModalOpened] = useState(false);
-  const [initialDeadline, setInitialDeadline] = useState<string | null>(null); // giữ lại ngày ban đầu khi thêm task ở calendar
+  const [initialDeadline, setInitialDeadline] = useState<Date | null>(null); // giữ lại ngày ban đầu khi thêm task ở calendar
   const [taskDetailModalOpened, setTaskDetailModalOpened] = useState(false);
   const [selectedTask, setSelectedTask] = useState<Task | null>(null);
   const [isAddingColumn, setIsAddingColumn] = useState(false);
@@ -115,30 +115,6 @@ export default function KanbanBoard() {
           tasks?.filter((task) => task.statusId === status.id) || []
         ),
       }));
-    } else {
-      return [
-        {
-          id: "todo",
-          title: "To Do",
-          cards: sortByPosition(
-            tasks?.filter((task) => task.statusId === "todo") || []
-          ),
-        },
-        {
-          id: "inprogress",
-          title: "In Progress",
-          cards: sortByPosition(
-            tasks?.filter((task) => task.statusId === "inprogress") || []
-          ),
-        },
-        {
-          id: "done",
-          title: "Done",
-          cards: sortByPosition(
-            tasks?.filter((task) => task.statusId === "done") || []
-          ),
-        },
-      ];
     }
   }, [statuses, tasks]);
 
@@ -173,7 +149,7 @@ export default function KanbanBoard() {
     (o) => o
   );
   const assignees = unionBy(
-    allTasks.flatMap((task) => task.assignees || []),
+    allTasks.flatMap((task) => task.assignees || []).filter((a) => a.user),
     (o) => o.userId
   );
   const creators = unionBy(
@@ -619,7 +595,7 @@ export default function KanbanBoard() {
             updateTask({ id, data: { deadline } })
           }
           onOpenAddTask={(deadline) => {
-            setInitialDeadline(deadline);
+            setInitialDeadline(deadline ? dayjs(deadline).toDate() : null);
             setAddTaskModalOpened(true);
           }}
         />

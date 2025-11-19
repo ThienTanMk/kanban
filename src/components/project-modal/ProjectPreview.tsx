@@ -2,8 +2,8 @@
 import { Box, Text, Group, Stack, Badge, Divider } from "@mantine/core";
 import dayjs from "dayjs";
 import { ProjectFormValues } from "./types";
-import { GeneratedTask } from "../GenerativeTaskModal";
-import { GeneratedSubtask } from "../GenerativeSubtask";
+import { GeneratedTask } from "../agent/GenerativeTaskModal";
+import { GeneratedSubtask } from "../agent/GenerativeSubtask";
 import { getPriorityColor } from "@/lib/utils";
 
 interface ProjectPreviewProps {

@@ -19,6 +19,7 @@ interface FolderSectionProps {
   handleSelectProject: (project: Project) => void;
   handleDeleteProject: (project: Project) => void;
   favoriteProjectIds: Set<number>;
+  onEditProject: (project: Project) => void;
 }
 
 export const FolderSection: React.FC<FolderSectionProps> = ({
@@ -36,6 +37,7 @@ export const FolderSection: React.FC<FolderSectionProps> = ({
   handleSelectProject,
   handleDeleteProject,
   favoriteProjectIds,
+  onEditProject,
 }) => {
   const isExpanded = expandedFolders[folderId] ?? false;
 
@@ -103,6 +105,7 @@ export const FolderSection: React.FC<FolderSectionProps> = ({
                       handleDeleteProject={handleDeleteProject}
                       customFolders={customFolders}
                       favoriteProjectIds={favoriteProjectIds}
+                      onEditProject={onEditProject}
                     />
                   ) : (
                     <Text key={index} size="xs" c="red" ml="sm" py="xs">

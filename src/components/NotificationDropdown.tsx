@@ -32,6 +32,8 @@ import {
 } from "@/hooks/notification";
 import { Notification } from "@/types/api";
 import { formatTime, getNotificationColor } from "@/lib/utils";
+import { useRouter } from "next/navigation";
+import { useProfileCompletionStore } from "@/hooks/user";
 dayjs.extend(relativeTime);
 
 export default function NotificationDropdown() {
@@ -41,6 +43,45 @@ export default function NotificationDropdown() {
   const markAsReadMutation = useMarkNotificationAsRead();
   const markAllAsReadMutation = useMarkAllNotificationsAsRead();
   const deleteNotificationMutation = useDeleteNotification();
+
+  const router = useRouter();
+  const { setPendingProjectId, setShouldShowProfileModal } =
+    useProfileCompletionStore();
+  const handleNotificationClick = async (notification: Notification) => {
+    // Mark as read
+    if (!notification.read) {
+      await markAsRead(notification.id);
+    }
+
+    // Nếu là notification về việc được thêm vào project
+    if (
+      notification.event?.type === "MEMBER_ADDED" ||
+      notification.event?.type === "INVITE_ACCEPTED"
+    ) {
+      const projectId = notification.event.payload?.projectId;
+
+      if (projectId) {
+        // Check xem user đã complete profile cho project này chưa
+        try {
+          const response = await fetch(
+            `/api/projects/${projectId}/member-profile-status`
+          );
+          const { profileCompleted } = await response.json();
+
+          if (!profileCompleted) {
+            // Chưa complete -> show modal
+            setPendingProjectId(projectId);
+            setShouldShowProfileModal(true);
+          } else {
+            // Đã complete -> navigate trực tiếp
+            router.push(`/?projectId=${projectId}`);
+          }
+        } catch (error) {
+          console.error("Failed to check profile status:", error);
+        }
+      }
+    }
+  };
 
   const markAsRead = async (notificationId: string) => {
     try {
@@ -190,9 +231,10 @@ export default function NotificationDropdown() {
                       : "var(--monday-bg-unread-noti)",
                     cursor: "pointer",
                   }}
-                  onClick={() =>
-                    !notification.read && markAsRead(notification.id)
-                  }
+                  // onClick={() =>
+                  //   !notification.read && markAsRead(notification.id)
+                  // }
+                  onClick={() => handleNotificationClick(notification)}
                 >
                   <Group gap="sm" align="flex-start">
                     <Avatar

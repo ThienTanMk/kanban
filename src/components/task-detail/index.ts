@@ -11,4 +11,4 @@ export {
   generateSubtasksForTask, 
   getPriorityColor,
   type GeneratedSubtask 
-} from "../GenerativeSubtask";
+} from "../agent/GenerativeSubtask";

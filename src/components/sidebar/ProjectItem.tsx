@@ -30,6 +30,7 @@ interface ProjectItemProps {
   handleDeleteProject: (project: Project) => void;
   customFolders: { id: string; name: string }[];
   favoriteProjectIds: Set<number>;
+  onEditProject: (project: Project) => void;
 }
 
 export const ProjectItem: React.FC<ProjectItemProps> = ({
@@ -44,6 +45,7 @@ export const ProjectItem: React.FC<ProjectItemProps> = ({
   handleDeleteProject,
   customFolders,
   favoriteProjectIds,
+  onEditProject,
 }) => {
   const isSelected = currentProjectId === project.id;
   const projectInitial = project.name?.charAt(0)?.toUpperCase() || "?";
@@ -159,7 +161,7 @@ export const ProjectItem: React.FC<ProjectItemProps> = ({
                 leftSection={<IconEdit size={14} />}
                 onClick={(e) => {
                   e.stopPropagation();
-                  // onEditProject(project); // Cần prop onEditProject
+                  onEditProject(project);
                 }}
               >
                 Edit

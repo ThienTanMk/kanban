@@ -11,8 +11,12 @@ import {
   ProjectCreateRequest,
   ProjectUpdateRequest,
 } from "@/types/api";
-import { GeneratedTask, generateTasksForProject } from "./GenerativeTaskModal";
-import { GeneratedSubtask } from "./GenerativeSubtask";
+import {
+  GeneratedTask,
+  generateTasksForProject,
+} from "./agent/GenerativeTaskModal";
+import { GeneratedSubtask } from "./agent/GenerativeSubtask";
+import AgentFeedback from "./agent/AgentFeedback";
 import {
   ProjectForm,
   ProjectPreview,
@@ -21,6 +25,14 @@ import {
   ProjectFormValues,
 } from "./project-modal";
 
+interface FeedbackData {
+  suggestionId: string;
+  rating: number;
+  helpful: boolean | null;
+  comment: string;
+  improvements: string[];
+  timestamp: string;
+}
 interface ProjectModalProps {
   opened: boolean;
   onClose: () => void;
@@ -45,6 +57,14 @@ const ProjectModal: React.FC<ProjectModalProps> = ({
   }>({});
   const [selectedTaskIds, setSelectedTaskIds] = useState<string[]>([]);
   const [selectedSubtaskIds, setSelectedSubtaskIds] = useState<string[]>([]);
+
+  const [feedbackOpened, setFeedbackOpened] = useState(false);
+  const [currentSuggestion, setCurrentSuggestion] = useState(null);
+
+  const handleSubmitFeedback = (feedback: FeedbackData) => {
+    console.log("Feedback:", feedback);
+    // Gửi lên backend để fine-tune model
+  };
 
   const form = useForm<ProjectFormValues>({
     initialValues: {
@@ -170,6 +190,14 @@ const ProjectModal: React.FC<ProjectModalProps> = ({
         });
       } else {
         await createMutation.mutateAsync(requestData as ProjectCreateRequest);
+        //test
+        // setCurrentSuggestion({
+        //   id: "test-suggestion",
+        //   type: "project",
+        //   content: "This is a test AI suggestion.",
+        // });
+        setFeedbackOpened(true);
+
         notifications.show({
           title: "Success",
           message: "Project created successfully",
@@ -197,83 +225,93 @@ const ProjectModal: React.FC<ProjectModalProps> = ({
     .filter((s) => selectedSubtaskIds.includes(s.id));
 
   return (
-    <Modal
-      opened={opened}
-      onClose={onClose}
-      title={
-        <Group gap="sm">
-          <IconFolder size={20} />
-          <Text fw={600}>
-            {isEditing ? "Edit Project" : "Create Project"}
-          </Text>
-        </Group>
-      }
-      size={showGenerative ? "95vw" : "lg"}
-      centered
-    >
-      {showGenerative ? (
-        <Grid gutter="md">
-          {/* Cột trái: Form tạo project */}
-          <Grid.Col span={4}>
-            <ProjectForm
-              form={form}
-              isEditing={isEditing}
-              isLoading={isLoading}
-              onSubmit={handleSubmit}
-              onCancel={onClose}
-              onGenerateTasks={handleGenerateTasks}
-              onCloseGenerative={handleCloseGenerative}
-              showGenerative={true}
-              selectedTasks={selectedTasks}
-              selectedSubtasks={selectedSubtasks}
-            />
-          </Grid.Col>
-
-          {/* Cột giữa: Danh sách tasks */}
-          <Grid.Col span={selectedTask ? 4 : 8}>
-            <GeneratedTasksList
-              tasks={generatedTasks}
-              selectedTask={selectedTask}
-              expandedTaskIds={expandedTaskIds}
-              generatedSubtasks={generatedSubtasks}
-              selectedTaskIds={selectedTaskIds}
-              selectedSubtaskIds={selectedSubtaskIds}
-              onTaskClick={handleTaskClick}
-              onSubtasksGenerated={handleSubtasksGenerated}
-              onTaskSelect={handleTaskSelect}
-              onSubtaskSelect={handleSubtaskSelect}
-              onExpandedTaskIdsChange={setExpandedTaskIds}
-              onClose={handleCloseGenerative}
-            />
-          </Grid.Col>
-
-          {/* Cột phải: Chi tiết task được chọn */}
-          {selectedTask && (
+    <>
+      <Modal
+        opened={opened}
+        onClose={onClose}
+        title={
+          <Group gap="sm">
+            <IconFolder size={20} />
+            <Text fw={600}>
+              {isEditing ? "Edit Project" : "Create Project"}
+            </Text>
+          </Group>
+        }
+        size={showGenerative ? "95vw" : "lg"}
+        centered
+      >
+        {showGenerative ? (
+          <Grid gutter="md">
+            {/* Cột trái: Form tạo project */}
             <Grid.Col span={4}>
-              <TaskDetailPanel
-                task={selectedTask}
-                subtasks={generatedSubtasks[selectedTask.id]}
-                selectedTaskIds={selectedTaskIds}
-                selectedSubtaskIds={selectedSubtaskIds}
-                onTaskSelect={handleTaskSelect}
-                onSubtaskSelect={handleSubtaskSelect}
-                onClose={() => setSelectedTask(null)}
+              <ProjectForm
+                form={form}
+                isEditing={isEditing}
+                isLoading={isLoading}
+                onSubmit={handleSubmit}
+                onCancel={onClose}
+                onGenerateTasks={handleGenerateTasks}
+                onCloseGenerative={handleCloseGenerative}
+                showGenerative={true}
+                selectedTasks={selectedTasks}
+                selectedSubtasks={selectedSubtasks}
               />
             </Grid.Col>
-          )}
-        </Grid>
-      ) : (
-        <ProjectForm
-          form={form}
-          isEditing={isEditing}
-          isLoading={isLoading}
-          onSubmit={handleSubmit}
-          onCancel={onClose}
-          onGenerateTasks={handleGenerateTasks}
-          showGenerative={false}
+
+            {/* Cột giữa: Danh sách tasks */}
+            <Grid.Col span={selectedTask ? 4 : 8}>
+              <GeneratedTasksList
+                tasks={generatedTasks}
+                selectedTask={selectedTask}
+                expandedTaskIds={expandedTaskIds}
+                generatedSubtasks={generatedSubtasks}
+                selectedTaskIds={selectedTaskIds}
+                selectedSubtaskIds={selectedSubtaskIds}
+                onTaskClick={handleTaskClick}
+                onSubtasksGenerated={handleSubtasksGenerated}
+                onTaskSelect={handleTaskSelect}
+                onSubtaskSelect={handleSubtaskSelect}
+                onExpandedTaskIdsChange={setExpandedTaskIds}
+                onClose={handleCloseGenerative}
+              />
+            </Grid.Col>
+
+            {/* Cột phải: Chi tiết task được chọn */}
+            {selectedTask && (
+              <Grid.Col span={4}>
+                <TaskDetailPanel
+                  task={selectedTask}
+                  subtasks={generatedSubtasks[selectedTask.id]}
+                  selectedTaskIds={selectedTaskIds}
+                  selectedSubtaskIds={selectedSubtaskIds}
+                  onTaskSelect={handleTaskSelect}
+                  onSubtaskSelect={handleSubtaskSelect}
+                  onClose={() => setSelectedTask(null)}
+                />
+              </Grid.Col>
+            )}
+          </Grid>
+        ) : (
+          <ProjectForm
+            form={form}
+            isEditing={isEditing}
+            isLoading={isLoading}
+            onSubmit={handleSubmit}
+            onCancel={onClose}
+            onGenerateTasks={handleGenerateTasks}
+            showGenerative={false}
+          />
+        )}
+      </Modal>
+      {currentSuggestion && (
+        <AgentFeedback
+          opened={feedbackOpened}
+          onClose={() => setFeedbackOpened(false)}
+          suggestion={currentSuggestion}
+          onSubmitFeedback={handleSubmitFeedback}
         />
       )}
-    </Modal>
+    </>
   );
 };
 
