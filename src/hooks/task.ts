@@ -173,7 +173,6 @@ export const useUpdateTaskStatus = () => {
 
   return useMutation({
     mutationFn: async ({ id, statusId }: { id: string; statusId: string }) => {
-      // Optimistic update trước
       if (currentProjectId && uid) {
         const queryKey = taskKeys.byProject(currentProjectId, uid);
         const previousTasks = queryClient.getQueryData<Task[]>(queryKey);
@@ -185,13 +184,9 @@ export const useUpdateTaskStatus = () => {
           queryClient.setQueryData(queryKey, updatedTasks);
         }
       }
-
-      // API call không await
       return taskApi.updateTaskStatus(id, statusId);
     },
     onSuccess: () => {
-      // Không cần invalidate ngay vì đã optimistic update
-      // Chỉ refetch để đồng bộ với server
       if (currentProjectId && uid) {
         queryClient.refetchQueries({
           queryKey: taskKeys.byProject(currentProjectId, uid),
@@ -199,7 +194,6 @@ export const useUpdateTaskStatus = () => {
       }
     },
     onError: (error, variables) => {
-      // Rollback khi lỗi
       if (currentProjectId && uid) {
         queryClient.invalidateQueries({
           queryKey: taskKeys.byProject(currentProjectId, uid),
@@ -214,11 +208,9 @@ export const useCreateSubtask = (parentTaskId: string) => {
   return useMutation({
     mutationFn: (data: CreateSubtaskDto) => taskApi.createSubtask(parentTaskId, data),
     onSuccess: () => {
-      // Invalidate parent task detail to refetch with new subtask
       queryClient.invalidateQueries({
         queryKey: taskKeys.detail(parentTaskId, uid),
       });
-      // Invalidate subtasks list
       queryClient.invalidateQueries({
         queryKey: taskKeys.subtasks(parentTaskId, uid),
       });
@@ -233,5 +225,78 @@ export const useGetSubtasks = (parentTaskId: string) => {
     queryFn: () => taskApi.getSubtasks(parentTaskId),
     enabled: !!parentTaskId && !!uid,
     staleTime: 5 * 60 * 1000,
+  });
+};
+
+export const useCreateTaskWithAI = () => {
+  const { currentProjectId } = useProjectStore();
+  const { uid } = useAuth();
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (data: any) => taskApi.createTaskWithAI(data),
+    onSuccess: () => {
+      if (currentProjectId && uid) {
+        queryClient.invalidateQueries({
+          queryKey: taskKeys.byProject(currentProjectId, uid),
+        });
+      }
+    },
+  });
+};
+
+export const useAssignTask = () => {
+  const queryClient = useQueryClient();
+  const { uid } = useAuth();
+
+  return useMutation({
+    mutationFn: ({ taskId, userId }: { taskId: string; userId: string }) =>
+      taskApi.assignTask(taskId, userId),
+    onSuccess: (_data, variables) => {
+      queryClient.invalidateQueries({ queryKey: taskKeys.detail(variables.taskId, uid) });
+      const { currentProjectId } = useProjectStore.getState();
+      if (currentProjectId && uid) {
+        queryClient.invalidateQueries({
+          queryKey: taskKeys.byProject(currentProjectId, uid),
+        });
+      }
+    },
+  });
+};
+
+export const useAssignTaskWithAI = () => {
+  const queryClient = useQueryClient();
+  const { uid } = useAuth();
+
+  return useMutation({
+    mutationFn: (taskId: string) => taskApi.assignTaskWithAI(taskId),
+    onSuccess: (_data, taskId) => {
+      queryClient.invalidateQueries({ queryKey: taskKeys.detail(taskId, uid) });
+      const { currentProjectId } = useProjectStore.getState();
+      if (currentProjectId && uid) {
+        queryClient.invalidateQueries({
+          queryKey: taskKeys.byProject(currentProjectId, uid),
+        });
+      }
+    },
+  });
+};
+
+export const useBreakDownTask = () => {
+  const queryClient = useQueryClient();
+  const { uid } = useAuth();
+
+  return useMutation({
+    mutationFn: (taskId: string) => taskApi.breakDownTask(taskId),
+    onSuccess: (_data, taskId) => {
+      queryClient.invalidateQueries({ queryKey: taskKeys.detail(taskId, uid) });
+      queryClient.invalidateQueries({ queryKey: taskKeys.subtasks(taskId, uid) });
+      const { currentProjectId } = useProjectStore.getState();
+      if (currentProjectId && uid) {
+        queryClient.invalidateQueries({
+          queryKey: taskKeys.byProject(currentProjectId, uid),
+        });
+      }
+    },
   });
 };

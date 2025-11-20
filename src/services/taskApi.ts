@@ -1,4 +1,4 @@
-import { CreateSubtaskDto, CreateTaskDto, Task, UpdateTaskDto } from "../types/api";
+import { CreateSubtaskDto, CreateTaskDto, CreateTaskWithAIDto, Task, UpdateTaskDto } from "../types/api";
 import { instance } from "./axios";
 
 export const taskApi = {
@@ -10,6 +10,10 @@ export const taskApi = {
     const response = await instance.get(
       `/projects/${projectId}/tasks?page=${page}&limit=${limit}`
     );
+    return response.data;
+  },
+  getTasks: async (params: { page?: number; limit?: number; projectId?: string }) => {
+    const response = await instance.get("/tasks", { params });
     return response.data;
   },
   getTask: async (id: string): Promise<Task> => {
@@ -32,12 +36,28 @@ export const taskApi = {
     const response = await instance.patch(`/tasks/${id}/status`, { statusId });
     return response.data;
   },
-   createSubtask: async (parentTaskId: string, data: CreateSubtaskDto): Promise<Task> => {
+  createSubtask: async (parentTaskId: string, data: CreateSubtaskDto): Promise<Task> => {
     const response = await instance.post(`/tasks/${parentTaskId}/subtasks`, data);
     return response.data;
   },
   getSubtasks: async (parentTaskId: string): Promise<Task[]> => {
     const response = await instance.get(`/tasks/${parentTaskId}/subtasks`);
+    return response.data;
+  },
+  createTaskWithAI: async (data: CreateTaskWithAIDto): Promise<Task> => {
+    const response = await instance.post("/tasks/ai", data);
+    return response.data;
+  },
+  assignTask: async (id: string, userId: string) => {
+    const response = await instance.post(`/tasks/${id}/assign`, { userId });
+    return response.data;
+  },
+  assignTaskWithAI: async (id: string) => {
+    const response = await instance.post(`/tasks/${id}/assign-ai`);
+    return response.data;
+  },
+  breakDownTask: async (id: string) => {
+    const response = await instance.post(`/tasks/${id}/break-down`);
     return response.data;
   },
 };
