@@ -1,4 +1,4 @@
-import { createTheme, MantineColorsTuple, } from '@mantine/core';
+import { createTheme, MantineColorsTuple, MantineTheme, } from '@mantine/core';
 
 export const themeMondayDark = createTheme({
   primaryColor: 'mondayBlue',
@@ -282,62 +282,39 @@ export const themeMondayDark = createTheme({
     Button: {
       defaultProps: {
         color: 'mondayBlue',
+        variant: 'filled',
       },
-      styles: {
+      styles: (_theme: MantineTheme, _params: any, options: { variant?: string }) => ({
         root: {
           borderRadius: '4px',
           fontWeight: 600,
           fontSize: '14px',
           transition: 'all 0.15s cubic-bezier(0.4, 0, 0.2, 1)',
-        },
-      },
-      // ============================================
-      // Use variants prop instead of data-variant
-      // ============================================
-      variants: {
-        filled: (theme) => ({
-          root: {
+
+          ...(options.variant === 'filled' && {
             backgroundColor: '#0073EA',
             color: '#FFFFFF',
             border: '1px solid transparent',
-
-            '&:hover': {
-              backgroundColor: '#0085FF',
-            },
-          },
-        }),
-        outline: (theme) => ({
-          root: {
+            '&:hover': { backgroundColor: '#0085FF' },
+          }),
+          ...(options.variant === 'outline' && {
             backgroundColor: 'transparent',
             borderColor: '#393D5A',
             color: '#FFFFFF',
-
-            '&:hover': {
-              backgroundColor: '#323759',
-            },
-          },
-        }),
-        subtle: (theme) => ({
-          root: {
+            '&:hover': { backgroundColor: '#323759' },
+          }),
+          ...(options.variant === 'subtle' && {
             backgroundColor: 'transparent',
             color: '#D0D4E4',
-
-            '&:hover': {
-              backgroundColor: 'rgba(255, 255, 255, 0.08)',
-            },
-          },
-        }),
-        light: (theme) => ({
-          root: {
+            '&:hover': { backgroundColor: 'rgba(255, 255, 255, 0.08)' },
+          }),
+          ...(options.variant === 'light' && {
             backgroundColor: '#323759',
             color: '#FFFFFF',
-
-            '&:hover': {
-              backgroundColor: '#3A4066',
-            },
-          },
-        }),
-      },
+            '&:hover': { backgroundColor: '#3A4066' },
+          }),
+        },
+      }),
     },
 
     SegmentedControl: {
@@ -362,39 +339,32 @@ export const themeMondayDark = createTheme({
     },
 
     Badge: {
-      styles: {
+      defaultProps: {
+        variant: 'light',
+      },
+      styles: (theme: any, params: any) => ({
         root: {
           borderRadius: '4px',
           fontWeight: 600,
           fontSize: '12px',
           textTransform: 'none',
-        },
-      },
-      // Use variants instead of data-variant
-      variants: {
-        light: (theme) => ({
-          root: {
+          ...(params.variant === 'light' && {
             backgroundColor: 'rgba(0, 115, 234, 0.15)',
             color: '#0085FF',
             border: '1px solid rgba(0, 115, 234, 0.3)',
-          },
-        }),
-        filled: (theme) => ({
-          root: {
+          }),
+          ...(params.variant === 'filled' && {
             backgroundColor: '#0073EA',
             color: '#FFFFFF',
             border: '1px solid transparent',
-          },
-        }),
-        outline: (theme) => ({
-          root: {
+          }),
+          ...(params.variant === 'outline' && {
             backgroundColor: 'transparent',
-            borderColor: '#393D5A',
             color: '#D0D4E4',
             border: '1px solid #393D5A',
-          },
-        }),
-      },
+          }),
+        },
+      }),
     },
 
     Menu: {

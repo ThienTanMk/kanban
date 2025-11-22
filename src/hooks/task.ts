@@ -1,7 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { taskApi } from "../services/taskApi";
 import { useProjectStore } from "../stores/projectStore";
-import { Task, CreateTaskDto, CreateSubtaskDto } from "../types/api";
+import { Task, CreateTaskDto, CreateSubtaskDto, UpdateTaskDto } from "../types/api";
 import { queryClient } from "@/services/queryClient";
 import { useAuth } from "./useAuth";
 export const taskKeys = {
@@ -79,7 +79,8 @@ export const useUpdateTask = () => {
   const { currentProjectId } = useProjectStore();
   const { uid } = useAuth();
   return useMutation({
-    mutationFn: async ({ id, data }: { id: string; data: CreateTaskDto }) => {
+    mutationFn: async ({ id, data }: { id: string; data: UpdateTaskDto }) => {
+      if (!currentProjectId) return;
       const queryKey = taskKeys.byProject(currentProjectId, uid);
       const previousTasks = queryClient.getQueryData<Task[]>(queryKey);
 

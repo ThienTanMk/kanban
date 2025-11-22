@@ -10,7 +10,6 @@ import {
   MultiSelect,
   Text,
   Paper,
-  Box,
   Group,
   ActionIcon,
   ScrollArea,
@@ -18,9 +17,11 @@ import {
 } from "@mantine/core";
 import dayjs from "dayjs";
 import { DateTimePicker } from "@mantine/dates";
-import { CreateTaskDto, Priority } from "@/types/api";
+import { Priority, Task } from "@/types/api";
 import { notifications } from "@mantine/notifications";
-import { IconClock, IconSparkles, IconUser, IconX } from "@tabler/icons-react";
+import { IconSparkles, IconUser } from "@tabler/icons-react";
+import { useProjectStore } from "@/stores/projectStore";
+import { useCreateTaskWithAI } from "@/hooks/task";
 import { getPriorityColor } from "@/lib/utils";
 
 export interface GeneratedTask {
@@ -44,59 +45,8 @@ interface GenerativeTaskModalProps {
   initialDeadline: Date | null;
   projectName?: string;
   compact?: boolean;
+  onAIFilled?: (task: Task) => void;
 }
-
-// Hàm generate tasks mockdata
-export const generateTasksForProject = (projectName?: string): GeneratedTask[] => {
-  const mockTasks: GeneratedTask[] = [
-    {
-      id: "gen-task-1",
-      name: "Setup Project Infrastructure",
-      description: "Initialize repository, setup CI/CD pipeline, configure development environment",
-      priority: Priority.HIGH,
-      deadline: dayjs().add(3, "day").toISOString(),
-      estimatedTime: 8,
-      assigned: ["Ethan", "Fiona"],
-    },
-    {
-      id: "gen-task-2",
-      name: "Design Database Schema",
-      description: "Create ERD, define tables, relationships, and indexes",
-      priority: Priority.HIGH,
-      deadline: dayjs().add(5, "day").toISOString(),
-      estimatedTime: 6,
-      assigned: ["Ethan", "Fiona"],
-    },
-    {
-      id: "gen-task-3",
-      name: "Implement Authentication System",
-      description: "Setup JWT authentication, user login/register, password recovery",
-      priority: Priority.MEDIUM,
-      deadline: dayjs().add(7, "day").toISOString(),
-      estimatedTime: 10,
-    },
-    {
-      id: "gen-task-4",
-      name: "Create API Endpoints",
-      description: "Develop RESTful APIs for all core features",
-      priority: Priority.MEDIUM,
-      deadline: dayjs().add(10, "day").toISOString(),
-      estimatedTime: 12,
-      assigned: ["Ethan", "Fiona"],
-    },
-    {
-      id: "gen-task-5",
-      name: "Build Frontend Components",
-      description: "Develop reusable UI components and pages",
-      priority: Priority.LOW,
-      deadline: dayjs().add(14, "day").toISOString(),
-      estimatedTime: 15,
-      assigned: ["Ethan", "Fiona"],
-    },
-  ];
-
-  return mockTasks;
-};
 
 export default function GenerativeTaskModal({
   opened,
@@ -109,174 +59,128 @@ export default function GenerativeTaskModal({
   initialDeadline,
   projectName,
   compact = false,
+  onAIFilled,
 }: GenerativeTaskModalProps) {
+  const { currentProjectId } = useProjectStore();
+  const createTaskWithAI = useCreateTaskWithAI();
+
   const [title, setTitle] = useState(initialTitle);
   const [description, setDescription] = useState(initialDescription);
-  const [priority, setPriority] = useState<Priority>(initialPriority);
-  const [assignees, setAssignees] = useState<string[]>(initialAssignees);
-  const [deadline, setDeadline] = useState<Date | null>(initialDeadline);
+  const [priority, setPriority] = useState<Priority>(
+    initialPriority || Priority.MEDIUM
+  );
+  const [assignees, setAssignees] = useState<string[]>(initialAssignees || []);
+  const [deadline, setDeadline] = useState<string | null>(
+    initialDeadline ? dayjs(initialDeadline).toISOString() : null
+  );
+  const [selectedTask, setSelectedTask] = useState<GeneratedTask | null>(null);
 
-   // State cho generative 
-   const [showGeneratedTasks, setShowGeneratedTasks] = useState(false);
-   const [generatedTasks, setGeneratedTasks] = useState<GeneratedTask[]>([]);
-   const [selectedTask, setSelectedTask] = useState<GeneratedTask | null>(null);
+  const handleGenerateWithAI = () => {
+    if (!currentProjectId) {
+      notifications.show({
+        color: "red",
+        message: "Vui lòng chọn project trước",
+      });
+      return;
+    }
+
+    const desc =
+      description.trim() ||
+      initialDescription.trim() ||
+      `Tạo task cho project${
+        projectName ? ` "${projectName}"` : ""
+      }. Hãy đề xuất chi tiết name, priority, deadline, estimated time và assignees nếu có thể.`;
+
+    createTaskWithAI.mutate(
+      {
+        description: desc,
+        projectId: currentProjectId,
+      },
+      {
+        onSuccess: (task: Task) => {
+          const gen: GeneratedTask = {
+            id: task.id,
+            name: task.name || "",
+            description: task.description || "",
+            priority: task.priority || Priority.MEDIUM,
+            deadline: task.deadline || "",
+            estimatedTime: task.estimatedTime || 0,
+            assigned:
+              task.assignees?.map(
+                (a) => a.user.name || a.user.email || a.userId
+              ) || [],
+          };
+
+          setSelectedTask(gen);
+          setTitle(gen.name);
+          setDescription(gen.description);
+          setPriority(gen.priority);
+          setDeadline(gen.deadline);
+          setAssignees(gen.assigned!);
+
+          notifications.show({
+            color: "green",
+            message:
+              "AI đã điền gợi ý vào form. Bạn có thể chỉnh sửa rồi tạo task.",
+          });
+        },
+        onError: (error) => {
+          notifications.show({
+            color: "red",
+            title: "Lỗi",
+            message: "Không thể tạo gợi ý với AI: " + error.message,
+          });
+        },
+      }
+    );
+  };
 
   useEffect(() => {
-    setTitle(initialTitle);
-    setDescription(initialDescription);
-    setPriority(initialPriority);
-    setAssignees(initialAssignees);
-    setDeadline(initialDeadline);
-  }, [
-    initialTitle,
-    initialDescription,
-    initialPriority,
-    initialAssignees,
-    initialDeadline,
-  ]);
-
-  // Hàm generate tasks
-  const handleGenerateTasks = () => {
-    const tasks = generateTasksForProject(projectName);
-    setGeneratedTasks(tasks);
-    setShowGeneratedTasks(true);
-    
-    notifications.show({
-      title: "✨ Tasks Generated",
-      message: `${tasks.length} tasks have been generated successfully!`,
-      color: "blue",
-    });
-  };
-
-  // Hàm select task từ generated list
-  const handleSelectTask = (task: GeneratedTask) => {
-    setTitle(task.name);
-    setDescription(task.description);
-    setPriority(task.priority);
-    setDeadline(dayjs(task.deadline).toDate());
-    setAssignees(task.assigned || []);
-    setSelectedTask(task);
-    setShowGeneratedTasks(false);
-    
-    notifications.show({
-      title: "Task Selected",
-      message: "Task details have been populated",
-      color: "green",
-    });
-  };
+    if (opened && initialDescription && !selectedTask === null) {
+      handleGenerateWithAI();
+    }
+  }, [opened, initialDescription]);
 
   return (
     <Modal
       opened={opened}
       onClose={onClose}
-      title={
-        <Text size="xl" fw={700}>
-          Generative Task
-        </Text>
-      }
-      size={showGeneratedTasks ? "xl" : "lg"}
-      withOverlay={false}
-      withinPortal={false}
-       classNames={{
-        content: `border-2 border-gray-300 rounded-2xl shadow-xl
-                  absolute top-[10%] right-[10%] translate-x-0 translate-y-0`,
-      }}
+      title="Create Task with AI"
+      size="lg"
     >
-       {showGeneratedTasks ? (
-        //Danh sách tasks đã generate
-        <Box>
-          <Group justify="space-between" mb="md">
-            <Group gap="xs">
-              <IconSparkles size={20} color="#228be6" />
-              <Text fw={600}>Generated Tasks ({generatedTasks.length})</Text>
-            </Group>
-            <ActionIcon 
-              onClick={() => setShowGeneratedTasks(false)}
-              color="gray"
-            >
-              <IconX size={16} />
-            </ActionIcon>
-          </Group>
-
-          <ScrollArea h={500}>
-            <Stack gap="sm">
-              {generatedTasks.map((task) => (
-                <Paper
-                  key={task.id}
-                  p="md"
-                  withBorder
-                  style={{
-                    cursor: "pointer",
-                    transition: "all 0.2s",
-                  }}
-                  onClick={() => handleSelectTask(task)}
-                  className="hover:bg-blue-50"
-                >
-                  <Text fw={600} size="sm" mb={4}>
-                    {task.name}
-                  </Text>
-                  <Text size="xs" c="dimmed" lineClamp={2} mb="xs">
-                    {task.description}
-                  </Text>
-                  <Group gap="xs">
-                    <Badge
-                      size="sm"
-                      color={getPriorityColor(task.priority)}
-                      variant="light"
-                    >
-                      {task.priority}
-                    </Badge>
-                    <Badge
-                      size="sm"
-                      variant="light"
-                      leftSection={<IconClock size={12} />}
-                    >
-                      {task.estimatedTime}h
-                    </Badge>
-                    <Badge size="sm" variant="light" color="gray">
-                      {dayjs(task.deadline).format("MMM DD")}
-                    </Badge>
-                  </Group>
-                  {task.assigned && (
-                    <Group gap="xs" mt={4}>
-                      <IconUser size={compact ? 10 : 12} stroke={1.5} />
-                      <Text size="xs" c="dimmed">
-                        {Array.isArray(task.assigned)
-                          ? task.assigned.join(", ")
-                          : task.assigned}
-                      </Text>
-                    </Group>
-                  )}
-                </Paper>
-              ))}
-            </Stack>
-          </ScrollArea>
-
-          <Group justify="flex-end" mt="md">
-            <Button variant="subtle" onClick={() => setShowGeneratedTasks(false)}>
-              Cancel
-            </Button>
-          </Group>
-        </Box>
-      ) : (
       <Stack gap="lg">
+        {/* Nút Generate với AI*/}
+        <Group justify="space-between" align="center">
+          <Text size="sm" c="dimmed">
+            Nhấn để AI gợi ý toàn bộ thông tin task
+          </Text>
+          <Button
+            size="sm"
+            variant="filled"
+            color="grape"
+            leftSection={<IconSparkles size={16} />}
+            loading={createTaskWithAI.isPending}
+            onClick={handleGenerateWithAI}
+          >
+            Generate with AI
+          </Button>
+        </Group>
+
         <TextInput
           label="Task Title"
-          placeholder="Generated task title"
+          placeholder="AI sẽ gợi ý..."
           value={title}
           onChange={(e) => setTitle(e.target.value)}
           required
           size="lg"
-          labelProps={{ style: { fontSize: "1.1rem", fontWeight: 600 } }}
         />
         <Textarea
           label="Description"
-          placeholder="Generated task description"
+          placeholder="Mô tả chi tiết yêu cầu (AI sẽ dựa vào đây)..."
           value={description}
           onChange={(e) => setDescription(e.target.value)}
           minRows={3}
           size="lg"
-          labelProps={{ style: { fontSize: "1.1rem", fontWeight: 600 } }}
         />
         <Select
           label="Priority"
@@ -293,40 +197,42 @@ export default function GenerativeTaskModal({
         />
         <MultiSelect
           label="Assignees"
-          placeholder="Generated assignees"
+          placeholder="AI có thể gợi ý..."
           value={assignees}
           onChange={setAssignees}
-          data={[]} 
+          data={[]}
           searchable
           size="lg"
         />
         <DateTimePicker
           label="Deadline"
-          placeholder="Generated deadline"
+          placeholder="AI có thể gợi ý..."
           value={deadline}
-          onChange={(value) =>
-            setDeadline(value ? dayjs(value).toDate() : null)
-          }
+          onChange={setDeadline}
           clearable
           size="lg"
         />
-         {selectedTask && (
-            <Paper p="sm" withBorder style={{ backgroundColor: "#f0f9ff" }}>
-              <Text size="xs" c="dimmed" mb={4}>
-                ✨ Auto-filled from generated task
-              </Text>
-              <Text size="sm" fw={500}>
-                Estimated time: {selectedTask.estimatedTime} hours
-              </Text>
-            </Paper>
-          )}
-        <div className="flex justify-end">
-          <Button size="lg" onClick={onPrefer}>
-          Create Task
-          </Button>
-        </div>
-      </Stack>
+
+        {selectedTask && (
+          <Paper p="sm" withBorder style={{ backgroundColor: "#f0f9ff" }}>
+            <Text size="xs" c="dimmed" mb={4}>
+              ✨ Đã điền từ gợi ý AI
+            </Text>
+            <Text size="sm" fw={500}>
+              Estimated time ước tính: {selectedTask.estimatedTime} giờ
+            </Text>
+          </Paper>
         )}
+
+        <Group justify="flex-end" mt="xl">
+          <Button variant="default" onClick={onClose}>
+            Cancel
+          </Button>
+          <Button size="lg" onClick={onPrefer} disabled={!title}>
+            Create Task
+          </Button>
+        </Group>
+      </Stack>
     </Modal>
   );
 }

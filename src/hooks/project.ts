@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { projectApi } from "../services/projectApi";
-import { AddMemberRequest, ProjectCreateRequest, ProjectUpdateRequest, UpdateMemberProfileDto, UpdateMemberRoleDto, UpdateMemberRoleRequest } from "../types/api";
+import { AddMemberRequest, ProjectCreateRequest, ProjectUpdateRequest, UpdateMemberProfileDto, UpdateMemberOnProjectDto, UpdateMemberRoleRequest } from "../types/api";
 import { queryClient } from "@/services/queryClient";
 import { useAuth } from "./useAuth";
 import { useProjectStore } from "@/stores/projectStore";
@@ -156,7 +156,7 @@ export const useUpdateMemberRole = () => {
     }: {
       projectId: string;
       memberId: string;
-      data: UpdateMemberRoleDto;
+      data: UpdateMemberOnProjectDto;
     }) => {
       return await projectApi.updateMemberRole(projectId, memberId, data);
     },

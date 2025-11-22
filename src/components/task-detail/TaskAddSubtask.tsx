@@ -37,7 +37,7 @@ export function TaskAddSubtask({
   const [description, setDescription] = useState("");
   const [priority, setPriority] = useState<Priority>(Priority.MEDIUM);
   const [assignees, setAssignees] = useState<string[]>([]);
-  const [deadline, setDeadline] = useState<Date | null>(null);
+  const [deadline, setDeadline] = useState<string | null>(null);
   const [estimatedTime, setEstimatedTime] = useState<number | undefined>(undefined);
   const [complexity, setComplexity] = useState<number | undefined>(undefined);
   const [tagIds, setTagIds] = useState<string[]>([]);
@@ -61,7 +61,7 @@ export function TaskAddSubtask({
       description: description.trim() || undefined,
       priority,
       assignees: assignees.length > 0 ? assignees : undefined,
-      deadline: deadline ? dayjs(deadline).toISOString() : undefined,
+      deadline: deadline || undefined,
       estimatedTime,
       complexity,
       tagIds: tagIds.length > 0 ? tagIds : undefined,

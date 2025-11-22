@@ -91,7 +91,7 @@ export default function KanbanBoard() {
   const [selectedAssignee, setSelectedAssignee] = useState<string | null>(null);
   const [selectedCreator, setSelectedCreator] = useState<string | null>(null);
   const [addTaskModalOpened, setAddTaskModalOpened] = useState(false);
-  const [initialDeadline, setInitialDeadline] = useState<Date | null>(null); // giữ lại ngày ban đầu khi thêm task ở calendar
+  const [initialDeadline, setInitialDeadline] = useState<Date | null>(null);
   const [taskDetailModalOpened, setTaskDetailModalOpened] = useState(false);
   const [selectedTask, setSelectedTask] = useState<Task | null>(null);
   const [isAddingColumn, setIsAddingColumn] = useState(false);
@@ -116,6 +116,7 @@ export default function KanbanBoard() {
         ),
       }));
     }
+    return [];
   }, [statuses, tasks]);
 
   const filteredColumns = useMemo(() => {
@@ -169,7 +170,7 @@ export default function KanbanBoard() {
   }, [allTasks]);
 
   const handleDragEnd = useCallback(
-    (result: DropResult) => {
+    async (result: DropResult) => {
       if (!canDragTasks) return;
 
       const { destination, source, draggableId } = result;
@@ -181,39 +182,86 @@ export default function KanbanBoard() {
         return;
       }
 
-      // Update cache ngay lập tức (không chờ API)
       const queryKey = taskKeys.byProject(currentProjectId as string);
+      const previousTasks = queryClient.getQueryData<Task[]>(queryKey);
 
-      queryClient.setQueryData<Task[]>(queryKey, (oldTasks) => {
-        if (!oldTasks) return oldTasks;
+      if (!previousTasks) return;
 
-        return oldTasks.map((task) =>
-          task.id === draggableId
-            ? { ...task, statusId: destination.droppableId }
-            : task
-        );
-      });
+      // Tìm task đang được kéo
+      const draggedTask = previousTasks.find((t) => t.id === draggableId);
+      if (!draggedTask) return;
 
-      // API call chạy background
-      updateTaskStatus(
-        { id: draggableId, statusId: destination.droppableId },
-        {
-          onError: () => {
-            // Rollback khi fail
-            queryClient.invalidateQueries({ queryKey });
-          },
-        }
+      // Lấy tasks trong destination column, đã sắp xếp theo position
+      const destColumnTasks = previousTasks
+        .filter((t) => t.statusId === destination.droppableId && t.id !== draggableId)
+        .sort((a, b) => (a.position ?? 0) - (b.position ?? 0));
+
+      // Tính position mới
+      let newPosition: number;
+      
+      if (destColumnTasks.length === 0) {
+        // Column trống
+        newPosition = 0;
+      } else if (destination.index === 0) {
+        // Kéo lên đầu
+        newPosition = (destColumnTasks[0].position ?? 0) - 1;
+      } else if (destination.index >= destColumnTasks.length) {
+        // Kéo xuống cuối
+        newPosition = (destColumnTasks[destColumnTasks.length - 1].position ?? 0) + 1;
+      } else {
+        // Kéo vào giữa
+        const prevTask = destColumnTasks[destination.index - 1];
+        const nextTask = destColumnTasks[destination.index];
+        newPosition = ((prevTask.position ?? 0) + (nextTask.position ?? 0)) / 2;
+      }
+
+      // Optimistic update cache
+      const updatedTasks = previousTasks.map((t) =>
+        t.id === draggableId
+          ? { ...t, statusId: destination.droppableId, position: newPosition }
+          : t
       );
+      queryClient.setQueryData(queryKey, updatedTasks);
+
+      // Gọi API để cập nhật cả statusId và position
+      try {
+        await updateTask({
+          id: draggableId,
+          data: {
+            statusId: destination.droppableId,
+            position: newPosition,
+          },
+        });
+      } catch (error) {
+        // Rollback nếu lỗi
+        queryClient.setQueryData(queryKey, previousTasks);
+        notifications.show({
+          title: "Error",
+          message: "Failed to update task position",
+          color: "red",
+        });
+      }
     },
-    [canDragTasks, currentProjectId, queryClient, updateTaskStatus]
+    [canDragTasks, currentProjectId, queryClient, updateTask]
   );
 
   const handleAddTask = async (data: CreateTaskDto) => {
     try {
+      const targetStatusId = addTaskToColumnId || statuses?.[0]?.id || "";
+      
+      // Tính position cho task mới (thêm vào cuối column)
+      const tasksInColumn = tasks?.filter(t => t.statusId === targetStatusId) || [];
+      const maxPosition = tasksInColumn.length > 0
+        ? Math.max(...tasksInColumn.map(t => t.position ?? 0))
+        : -1;
+      const newPosition = maxPosition + 1;
+
       const createdTask = await createTask({
         ...data,
-        statusId: addTaskToColumnId || statuses?.[0]?.id || "",
+        statusId: targetStatusId,
+        position: newPosition, // Thêm position
       });
+      
       setSelectedTask(createdTask);
       setTaskDetailModalOpened(true);
     } catch (error) {
@@ -236,16 +284,6 @@ export default function KanbanBoard() {
   const handleAddColumn = async () => {
     const trimmedTitle = newColumnTitle.trim();
     if (!trimmedTitle) return;
-
-    // const defaultNames = ["to do", "in progress", "done"];
-    // if (defaultNames.includes(trimmedTitle.toLowerCase())) {
-    //   notifications.show({
-    //     title: "Duplicate name",
-    //     message: "Tên này trùng với danh sách mặc định (To Do / In Progress / Done).",
-    //     color: "red",
-    //   });
-    //   return;
-    // }
 
     const isDuplicate = columns.some(
       (col) => col.title.trim().toLowerCase() === trimmedTitle.toLowerCase()
@@ -592,7 +630,7 @@ export default function KanbanBoard() {
           tasks={filteredColumns.flatMap((col) => col.cards)}
           onViewTask={handleTaskClick}
           onTaskDeadlineChange={(id, deadline) =>
-            updateTask({ id, data: { deadline } })
+            updateTask({ id, data: { deadline: deadline ?? undefined } })
           }
           onOpenAddTask={(deadline) => {
             setInitialDeadline(deadline ? dayjs(deadline).toDate() : null);

@@ -68,6 +68,9 @@ export default function KanbanCalendar({
     }
   }, [currentDate, viewMode]);
 
+  const sortByPosition = (tasks: Task[]) =>
+    [...tasks].sort((a, b) => (a.position ?? 0) - (b.position ?? 0));
+
   const taskGroups = useMemo(() => {
     const groups: Record<string, Task[]> = { unscheduled: [] };
     tasks.forEach((task) => {
@@ -84,6 +87,11 @@ export default function KanbanCalendar({
         }
       }
     });
+
+    Object.keys(groups).forEach((key) => {
+      groups[key] = sortByPosition(groups[key]);
+    });
+
     return groups;
   }, [tasks]);
 
@@ -113,7 +121,7 @@ export default function KanbanCalendar({
 
   const openMoreTasks = (day: dayjs.Dayjs, tasks: Task[]) => {
     setSelectedDay(day);
-    setSelectedDayTasks(tasks);
+    setSelectedDayTasks(sortByPosition(tasks));
     setMoreTasksModalOpened(true);
   };
 
@@ -223,7 +231,6 @@ export default function KanbanCalendar({
                       >
                         <TaskCard
                           card={task}
-                          // index={index}
                           onViewTask={onViewTask}
                           isCalendarView={true}
                         />

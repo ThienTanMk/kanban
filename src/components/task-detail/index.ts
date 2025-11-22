@@ -9,6 +9,5 @@ export { default as SubtaskTree } from "../SubtaskDetail";
 export { TaskAddSubtask } from "./TaskAddSubtask";
 export { 
   generateSubtasksForTask, 
-  getPriorityColor,
   type GeneratedSubtask 
 } from "../agent/GenerativeSubtask";

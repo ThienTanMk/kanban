@@ -3,24 +3,12 @@ import { Stack, Group, Text, Badge, Paper, Tooltip } from "@mantine/core";
 import { IconClock, IconCornerDownRight } from "@tabler/icons-react";
 import dayjs from "dayjs";
 import { Task } from "@/types/api";
+import { getPriorityColor } from "@/lib/utils";
 
 interface SubtaskTreeProps {
   subtasks: Task[];
   onTaskClick: (task: Task) => void;
 }
-
-const getPriorityColor = (priority?: string) => {
-  switch (priority) {
-    case "HIGH":
-      return "red";
-    case "MEDIUM":
-      return "yellow";
-    case "LOW":
-      return "green";
-    default:
-      return "gray";
-  }
-};
 
 export default function SubtaskTree({ subtasks, onTaskClick }: SubtaskTreeProps) {
   

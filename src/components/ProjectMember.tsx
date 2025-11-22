@@ -13,7 +13,7 @@ import {
   ActionIcon,
 } from "@mantine/core";
 import { IconEdit } from "@tabler/icons-react";
-import { UsersOnProject, Task, UpdateMemberRoleDto, UpdateMemberProfileDto } from "@/types/api";
+import { UsersOnProject, Task, UpdateMemberOnProjectDto, UpdateMemberProfileDto } from "@/types/api";
 import { useGetMe } from "@/hooks/user";
 import { useUpdateMemberProfile, useUpdateMemberRole } from "@/hooks/project";
 import { useProjectStore } from "@/stores/projectStore";
@@ -57,7 +57,7 @@ export default function ProjectMember({
     data,
   }: {
     memberId: string;
-    data: UpdateMemberRoleDto;
+    data: UpdateMemberOnProjectDto;
   }) => {
     if (!currentProjectId) return;
 
@@ -73,7 +73,7 @@ export default function ProjectMember({
     data,
   }: {
     memberId: string;
-    data: UpdateMemberProfileDto;
+    data: UpdateMemberOnProjectDto;
   }) => {
     if (!currentProjectId) return;
     await updateMemberProfile({

@@ -1,4 +1,3 @@
-// @components/ProfileCompletionWrapper.tsx
 "use client";
 
 import { useState, useEffect } from "react";

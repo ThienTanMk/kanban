@@ -21,6 +21,9 @@ export default function KanbanTableView({
 }: KanbanTableViewProps) {
   const [expandedTasks, setExpandedTasks] = useState<Record<string, boolean>>({});
 
+  const sortByPosition = (tasks: Task[]) =>
+    [...tasks].sort((a, b) => (a.position ?? 0) - (b.position ?? 0));
+
   const taskGroups = useMemo(() => {
     const statusMap = new Map<string, { name: string; position: number | null }>();
     statuses.forEach((s) => {
@@ -58,9 +61,10 @@ export default function KanbanTableView({
       finalStatusOrder.push("Unknown");
     }
 
+    // Sort tasks by position within each status group
     return finalStatusOrder.map((status) => ({
       status,
-      tasks: grouped[status] || [],
+      tasks: sortByPosition(grouped[status] || []),
       color: getStatusColor(status),
     }));
   }, [tasks, statuses]);

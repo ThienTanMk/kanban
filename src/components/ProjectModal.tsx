@@ -11,10 +11,7 @@ import {
   ProjectCreateRequest,
   ProjectUpdateRequest,
 } from "@/types/api";
-import {
-  GeneratedTask,
-  generateTasksForProject,
-} from "./agent/GenerativeTaskModal";
+import { GeneratedTask } from "./agent/GenerativeTaskModal";
 import { GeneratedSubtask } from "./agent/GenerativeSubtask";
 import AgentFeedback from "./agent/AgentFeedback";
 import {
@@ -24,6 +21,7 @@ import {
   TaskDetailPanel,
   ProjectFormValues,
 } from "./project-modal";
+import { generateTasksAI } from "@/lib/taskAI";
 
 interface FeedbackData {
   suggestionId: string;
@@ -121,17 +119,40 @@ const ProjectModal: React.FC<ProjectModalProps> = ({
     }
   }, [opened, project, isEditing]);
 
-  //generate tasks
-  const handleGenerateTasks = () => {
-    const tasks = generateTasksForProject(form.values.name);
-    setGeneratedTasks(tasks);
-    setShowGenerative(true);
+  const handleGenerateTasks = async () => {
+    if (!form.values.name) {
+      notifications.show({
+        title: "Error",
+        message: "Vui lòng điền tên project trước khi generate tasks",
+        color: "red",
+      });
+      return;
+    }
 
-    notifications.show({
-      title: "✨ Tasks Generated",
-      message: `${tasks.length} tasks have been generated successfully!`,
-      color: "blue",
-    });
+    try {
+      const descriptions = [`Tạo các task cho project: ${form.values.name}`];
+      const projectId = project?.id;
+
+      if (!projectId) {
+        return;
+      }
+      const tasks = await generateTasksAI(descriptions, projectId);
+
+      setGeneratedTasks(tasks);
+      setShowGenerative(true);
+
+      notifications.show({
+        title: "✨ Tasks Generated",
+        message: `${tasks.length} tasks đã được tạo thành công từ AI!`,
+        color: "blue",
+      });
+    } catch (error: any) {
+      notifications.show({
+        title: "Error",
+        message: "Không thể tạo tasks từ AI: " + error.message,
+        color: "red",
+      });
+    }
   };
 
   //subtasks generate

@@ -9,7 +9,7 @@ interface TaskTableProps {
   expandedTasks: Record<string, boolean>;
   onViewTask: (task: Task) => void;
   onToggleExpansion: (taskId: string, e: React.MouseEvent) => void;
-  placeholder?: React.ReactElement;
+  placeholder?: React.ReactNode;
 }
 
 export function TaskTable({

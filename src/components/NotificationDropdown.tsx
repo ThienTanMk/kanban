@@ -58,10 +58,18 @@ export default function NotificationDropdown() {
       notification.event?.type === "MEMBER_ADDED" ||
       notification.event?.type === "INVITE_ACCEPTED"
     ) {
-      const projectId = notification.event.payload?.projectId;
+      let projectId: string | undefined;
+
+      try {
+        if (notification.event.payload) {
+          const payloadObj = JSON.parse(notification.event.payload);
+          projectId = payloadObj.projectId;
+        }
+      } catch (err) {
+        console.error("Failed to parse notification payload:", err);
+      }
 
       if (projectId) {
-        // Check xem user đã complete profile cho project này chưa
         try {
           const response = await fetch(
             `/api/projects/${projectId}/member-profile-status`
@@ -69,11 +77,9 @@ export default function NotificationDropdown() {
           const { profileCompleted } = await response.json();
 
           if (!profileCompleted) {
-            // Chưa complete -> show modal
             setPendingProjectId(projectId);
             setShouldShowProfileModal(true);
           } else {
-            // Đã complete -> navigate trực tiếp
             router.push(`/?projectId=${projectId}`);
           }
         } catch (error) {

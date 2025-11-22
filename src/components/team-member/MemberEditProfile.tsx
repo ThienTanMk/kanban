@@ -15,7 +15,7 @@ import { IconAlertCircle, IconCheck } from "@tabler/icons-react";
 import {
   Level,
   UsersOnProject,
-  UpdateMemberRoleDto,
+  UpdateMemberOnProjectDto,
   ProjectRole,
   UpdateMemberProfileDto,
 } from "@/types/api";
@@ -26,7 +26,7 @@ interface MemberEditProfileProps {
   member: UsersOnProject | null;
   onUpdateMemberRole?: (data: {
     memberId: string;
-    data: UpdateMemberRoleDto;
+    data: UpdateMemberOnProjectDto;
   }) => Promise<void>;
   onUpdateMemberProfile?: (data: {
     memberId: string;

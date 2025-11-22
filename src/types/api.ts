@@ -204,7 +204,7 @@ export interface UpdateProjectDto {
 export interface CreateTaskDto {
   name: string;
   description?: string;
-  statusId: string;
+  statusId?: string;
   tagIds?: string[];
   assignees?: string[];
   deadline?: string;
@@ -273,7 +273,7 @@ export interface CreateSubtaskDto {
   description?: string;
   tagIds?: string[];
   assignees?: string[];
-  deadline?: Date;
+  deadline?: string;
   actualTime?: number;
   complexity?: number;
   estimatedTime?: number;

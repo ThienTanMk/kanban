@@ -21,7 +21,7 @@ import { ProjectItem } from "./ProjectItem";
 interface Folder {
   id: string;
   name: string;
-  projectIds: number[];
+  projectIds: string[];
 }
 
 interface SidebarProjectsProps {
@@ -32,12 +32,12 @@ interface SidebarProjectsProps {
   unassignedProjects: Project[];
   customFolders: Folder[];
   showAllProjects: boolean;
-  favoriteProjectIds: Set<number>;
+  favoriteProjectIds: Set<string>;
   expandedFolders: { [key: string]: boolean };
   currentProjectId: string | null;
   refetch: () => void;
-  toggleFavorite: (projectId: number) => void;
-  addProjectToFolder: (projectId: number, folderId: string) => void;
+  toggleFavorite: (projectId: string) => void;
+  addProjectToFolder: (projectId: string, folderId: string) => void;
   handleDragEnd: (result: any) => void;
   handleSelectProject: (project: Project) => void;
   handleDeleteProject: (project: Project) => void;

@@ -6,7 +6,7 @@ import {
   ProjectUpdateRequest,
   Task,
   UpdateMemberProfileDto,
-  UpdateMemberRoleDto,
+  UpdateMemberOnProjectDto,
   UpdateMemberRoleRequest,
   UsersOnProject,
 } from "../types/api";
@@ -65,7 +65,7 @@ export const projectApi = {
   updateMemberRole: async (
     projectId: string,
     memberId: string,
-    data: UpdateMemberRoleDto
+    data: UpdateMemberOnProjectDto
   ): Promise<UsersOnProject> => {
     const response = await instance.put(`/projects/${projectId}/members/${memberId}/role`, data);
     return response.data;

@@ -1,4 +1,4 @@
-import { StatusTask } from "@/types/api";
+import { TaskState as StatusTask} from "@/types/api";
 import { instance } from "./axios";
 
 export async function addStatus(name: string): Promise<StatusTask> {

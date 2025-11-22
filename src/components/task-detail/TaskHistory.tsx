@@ -35,7 +35,7 @@ export function HistorySection({ taskId }: HistorySectionProps) {
                     </Text>
                   </Group>
                 </Group>
-                <Text size="sm">{entry.description}</Text>
+                <Text size="sm">{entry.payload}</Text>
               </div>
             </Group>
           </Paper>

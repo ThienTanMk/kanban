@@ -113,8 +113,8 @@ const Summary: React.FC = () => {
     const recentTasks = [...tasks]
       .sort(
         (a, b) =>
-          new Date(b.updatedAt || b.createdAt).getTime() -
-          new Date(a.updatedAt || a.createdAt).getTime()
+          new Date(b.updatedAt ?? b.createdAt ?? 0).getTime() -
+          new Date(a.updatedAt ?? a.createdAt ?? 0).getTime()
       )
       .slice(0, 10);
 

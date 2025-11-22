@@ -12,7 +12,7 @@ import {
 } from "@mantine/core";
 import { DateTimePicker } from "@mantine/dates";
 import dayjs from "dayjs";
-import { Task } from "@/types/api";
+import { Priority, Task } from "@/types/api";
 import { useGetAvailableUsers } from "@/hooks/user";
 import { useGetStatuses } from "@/hooks/status";
 import { useUpdateTask } from "@/hooks/task";
@@ -76,13 +76,8 @@ export function TaskEditForm({ task, onCancel, onSuccess }: TaskEditFormProps) {
           label="Priority"
           value={editedTask?.priority || ""}
           onChange={(value) =>
-            setEditedTask({ ...editedTask, priority: value || "" })
+            setEditedTask({ ...editedTask, priority: value as Priority })
           }
-          data={[
-            { value: "HIGH", label: "High" },
-            { value: "MEDIUM", label: "Medium" },
-            { value: "LOW", label: "Low" },
-          ]}
           style={{ flex: 1 }}
           size="md"
         />

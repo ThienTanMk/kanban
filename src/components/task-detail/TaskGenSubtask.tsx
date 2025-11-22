@@ -57,9 +57,9 @@ export function GeneratedSubtasksPanel({
                 >
                   {sub.estimatedTime}h
                 </Badge>
-                <Badge size="xs" variant="light" color="gray">
+                {/* <Badge size="xs" variant="light" color="gray">
                   {dayjs(sub.deadline).format("MMM DD")}
-                </Badge>
+                </Badge> */}
               </Group>
             </Paper>
           ))}
